@@ -89,6 +89,7 @@ class LoggingSL4JExample {
               // ZIOHack as the name implies is a hack. It abuses package name to get access.
               // Definitely a less than ideal solution however adult anyone feels.
               _ <- ZIOHack.attemptWithMdcLogging(sl4jLogger.info(s"woofWithMdc $getThreadName"))
+              _ <- ZIOHack.attemptWithMdcLogging2(sl4jLogger.info(s"woofWithMdc2 $getThreadName"))
               _ <- ZIO.attempt(sl4jLogger.info(s"woofNoMdc $getThreadName"))
               a = new RuntimeException("I had problems and the ice cream didn't help")
               _ <- ZIO.logCause("dying for a cause", Cause.die(a))
