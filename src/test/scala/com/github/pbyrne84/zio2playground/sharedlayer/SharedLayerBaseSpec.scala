@@ -1,7 +1,8 @@
 package com.github.pbyrne84.zio2playground.sharedlayer
 
-import zio.{Scope, ZIO, ZLayer}
+import com.typesafe.scalalogging.StrictLogging
 import zio.test._
+import zio.{Scope, UIO, ZIO, ZLayer}
 
 /** Currently with the intellij plugins not compatible with zio the tests do not run correctly and
   * we cannot guarantee that things will execute only once. Annoying.
@@ -19,7 +20,7 @@ import zio.test._
   * The build sbt also need tests not to be parallel or forked. Forked affects the reporting though.
   */
 object ExpensiveService {
-  def log(message: String) = ZIO.succeed(println(message))
+  def log(message: String): UIO[Unit] = ZIO.logInfo(message)
 
   val layer: ZLayer[Any, Nothing, ExpensiveService] = {
 
@@ -37,17 +38,18 @@ object ExpensiveService {
 }
 
 //This when run from commandline only creates 1, when run in intellij creates 3 how ever many things run ?
-//Across different threads
-case class ExpensiveService() {
-  println(s"created ExpensiveService $getClass ${Thread.currentThread()}")
+//Across different threads. This message is repeated in many forms as wondering why this is being
+//logged should raise suspicions.
+case class ExpensiveService() extends StrictLogging {
+  logger.info(s"created ExpensiveService $getClass ${Thread.currentThread()}")
 
-  def boo: Unit = println("booo")
+  def boo: Unit = logger.info("booo")
 }
 
 object SharedService {
   val layer: ZLayer[Any, Nothing, SharedService] = {
 
-    def log(message: String) = ZIO.succeed(println(message))
+    def log(message: String): UIO[Unit] = ZIO.log(message)
 
     ZLayer.scoped {
       val layer = ZIO.acquireRelease {
@@ -62,8 +64,9 @@ object SharedService {
 
 }
 
-case class SharedService() {
-  println(s"created SharedService $getClass")
+case class SharedService() extends StrictLogging {
+  // see all other comments :)
+  logger.info(s"created SharedService $getClass")
 
   def boo: Unit = println("booo")
 }

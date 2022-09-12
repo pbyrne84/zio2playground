@@ -1,6 +1,6 @@
-import sys
-import subprocess
 import os.path
+import subprocess
+import sys
 
 runner_dir = "pythonTestRunner"
 test_cache_file = f"{runner_dir}/previous_test.txt"

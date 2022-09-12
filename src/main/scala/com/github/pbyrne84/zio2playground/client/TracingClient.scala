@@ -1,13 +1,19 @@
 package com.github.pbyrne84.zio2playground.client
 
 import com.github.pbyrne84.zio2playground.tracing.HTTPTracing
+import io.opentelemetry.api.trace.{SpanId, TraceId}
 import zhttp.http.{Headers, HttpData, Method, Response}
 import zhttp.service.client.ClientSSLHandler.ClientSSLOptions
 import zhttp.service.{ChannelFactory, Client, EventLoopGroup}
-import zio.{Trace, ZIO, ZLayer}
 import zio.telemetry.opentelemetry.Tracing
+import zio.{Trace, ZIO, ZLayer}
 
 object B3 {
+
+  // current context returns this as filler if the tracing is not working properly
+  val emptyTraceId: String = "0".padTo(TraceId.getLength, "0").mkString
+  val emptySpanId: String = "0".padTo(SpanId.getLength, "0").mkString
+
   object header {
     val traceId: String = "X-B3-TraceId"
     val spanId: String = "X-B3-SpanId"
@@ -27,11 +33,10 @@ object TracingClient {
     Throwable,
     Response
   ] = {
-
     ZIO.service[TracingClient].flatMap(_.request(url, method, headers, content, ssl))
   }
 
-  val tracingClient: ZLayer[HTTPTracing, Nothing, TracingClient] = ZLayer {
+  val tracingClientLayer: ZLayer[HTTPTracing, Nothing, TracingClient] = ZLayer {
     for {
       httpTracing <- ZIO.service[HTTPTracing]
     } yield new TracingClient(httpTracing)

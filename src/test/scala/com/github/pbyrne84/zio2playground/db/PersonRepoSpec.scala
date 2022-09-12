@@ -1,18 +1,11 @@
 package com.github.pbyrne84.zio2playground.db
 import com.github.pbyrne84.zio2playground.Builds.PersonServiceBuild
-import com.github.pbyrne84.zio2playground.Main.Person
-import com.github.pbyrne84.zio2playground.testbootstrap.{
-  AllTestBootstrap,
-  EnvironmentParamSetup,
-  InitialisedParams
-}
-import com.github.pbyrne84.zio2playground.testbootstrap.wiremock.ServerAWireMock
-import com.github.pbyrne84.zio2playground.{BaseSpec, Builds, QuillDbConfig}
+import com.github.pbyrne84.zio2playground.{BaseSpec, Builds}
 import org.mockito.Mockito
-import zio.{Scope, ZIO, ZLayer}
 import zio.test.Assertion._
 import zio.test.TestAspect.sequential
 import zio.test._
+import zio.{Scope, ZIO, ZLayer}
 
 object PersonRepoSpec extends BaseSpec with QuillDbConfig {
 
@@ -73,13 +66,10 @@ object PersonRepoSpec extends BaseSpec with QuillDbConfig {
 
       for {
         _ <- reset
-        _ = println("aaaa")
-        params <- EnvironmentParamSetup.setup
-        _ = println(s"aaaa $params")
-        x <- Builds.PersonServiceBuild.buildWithInjections(mockPersonRepoLayer)
-        _ <- x.deletePeople()
-        count <- x.addPerson(person)
-      } yield assert(count)(equalTo(1L))
+        personRepo <- Builds.PersonServiceBuild.buildWithInjections(mockPersonRepoLayer)
+        _ <- personRepo.deletePeople()
+        count <- personRepo.addPerson(person)
+      } yield assertTrue(count == 1L)
     }
   ).provideSomeShared[BaseSpec.Shared](
     Scope.default

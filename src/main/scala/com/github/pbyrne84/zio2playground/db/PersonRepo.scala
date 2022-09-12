@@ -1,11 +1,12 @@
 package com.github.pbyrne84.zio2playground.db
 
-import com.github.pbyrne84.zio2playground.Main.Person
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
 import zio.{ZIO, ZLayer}
 
 import java.sql.SQLException
+
+case class Person(id: Int, firstName: String, lastName: String, age: Int)
 
 object PersonRepo {
 

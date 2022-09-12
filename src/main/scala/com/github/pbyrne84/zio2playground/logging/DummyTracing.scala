@@ -1,14 +1,15 @@
 package com.github.pbyrne84.zio2playground.logging
 
+import com.typesafe.scalalogging.StrictLogging
 import io.opentelemetry.api.internal.StringUtils
-import io.opentelemetry.api.trace.{Span, SpanContext, TraceFlags, TraceId, TraceState}
+import io.opentelemetry.api.trace._
 import io.opentelemetry.context.Context
 import io.opentelemetry.context.propagation.{TextMapGetter, TextMapPropagator, TextMapSetter}
 
 import java.util
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
-object DummyTracing {
+object DummyTracing extends StrictLogging {
   val traceIdField = "traceId"
   val spanIdField = "spanId"
 
@@ -40,12 +41,12 @@ object DummyTracing {
   val headerTextMapGetter: TextMapGetter[List[(String, String)]] =
     new TextMapGetter[List[(String, String)]] {
       override def keys(carrier: List[(String, String)]) = {
-        println(s"$carrier")
+        logger.info(s"$carrier")
         carrier.map(_._1.toLowerCase).asJava
       }
 
       override def get(carrier: List[(String, String)], key: String): String = {
-        println(s"get $carrier -  $key")
+        logger.info(s"get $carrier -  $key")
         // headers should be case insensitive
         carrier.find(_._1.toLowerCase == key.toLowerCase).map(_._2).orNull
       }

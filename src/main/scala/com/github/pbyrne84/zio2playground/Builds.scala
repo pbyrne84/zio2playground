@@ -1,6 +1,6 @@
 package com.github.pbyrne84.zio2playground
 
-import com.github.pbyrne84.zio2playground.db.PersonRepo
+import com.github.pbyrne84.zio2playground.db.{PersonRepo, QuillDbConfig}
 import com.github.pbyrne84.zio2playground.routes.Routes
 import com.github.pbyrne84.zio2playground.service.PersonService
 import zio.Random.RandomScala

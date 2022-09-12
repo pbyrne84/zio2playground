@@ -2,7 +2,12 @@ package com.github.pbyrne84.zio2playground.testbootstrap.wiremock
 
 import com.github.pbyrne84.zio2playground.testbootstrap.InitialisedParams
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import com.typesafe.scalalogging.StrictLogging
 import zio.{Task, ZIO, ZLayer}
+
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 object ServerAWireMock {
 
@@ -16,10 +21,10 @@ object ServerAWireMock {
   def stubCall(response: String): ZIO[ServerAWireMock, Throwable, Unit] =
     ZIO.serviceWithZIO[ServerAWireMock](_.stubCall(response))
 
-  def getStubbings: ZIO[ServerAWireMock, Throwable, Unit] =
+  def getStubbings: ZIO[ServerAWireMock, Throwable, List[StubMapping]] =
     ZIO.serviceWithZIO[ServerAWireMock](_.getStubbings)
 
-  def verifyHeaders(headers: List[(String, String)]) = {
+  def verifyHeaders(headers: List[(String, String)]): ZIO[ServerAWireMock, Throwable, Unit] = {
     ZIO.serviceWithZIO[ServerAWireMock](_.verifyHeaders(headers))
   }
 
@@ -27,9 +32,11 @@ object ServerAWireMock {
 
 }
 
-class ServerAWireMock(testWireMock: TestWireMock) {
+class ServerAWireMock(testWireMock: TestWireMock) extends StrictLogging {
   import WireMock._
-  println("creating ServerAWireMock")
+  // As this is part of a shared service layer this should only fire once.
+  // Read the readme about why this may not be the case (object.main).
+  logger.info("creating ServerAWireMock")
 
   def reset: Task[Unit] =
     testWireMock.reset
@@ -42,28 +49,21 @@ class ServerAWireMock(testWireMock: TestWireMock) {
           .any(WireMock.urlMatching(".*"))
           .willReturn(aResponse().withBody(response))
       )
-      println("doing the stubbing")
     }
   }
 
   def verifyHeaders(headers: List[(String, String)]): Task[Unit] = {
-    val verification = headers.foldLeft(getRequestedFor(urlMatching(".*"))) {
-      case (request, (name, value)) =>
-        request.withHeader(name, equalTo(value))
-
+    // wiremock is a builder builder builder mutation thingy
+    val builder: RequestPatternBuilder = anyRequestedFor(urlMatching(".*"))
+    val verification = headers.foldLeft(builder) { case (request, (name, value)) =>
+      request.withHeader(name, equalTo(value))
     }
 
-    ZIO.attempt {
-      testWireMock.wireMock.verify(verification)
-
-    }
-
+    ZIO.attempt(testWireMock.wireMock.verify(verification))
   }
 
-  def getStubbings: Task[Unit] = {
-    ZIO.attemptBlocking {
-      println("boooop " + testWireMock.wireMock.getStubMappings)
-    }
+  def getStubbings: Task[List[StubMapping]] = {
+    ZIO.attemptBlocking { testWireMock.wireMock.getStubMappings.asScala.toList }
   }
 
 }

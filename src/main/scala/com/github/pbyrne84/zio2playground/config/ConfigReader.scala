@@ -1,9 +1,9 @@
 package com.github.pbyrne84.zio2playground.config
 
-import zio.config._
 import com.typesafe.config.{Config, ConfigFactory}
-import zio.{Layer, Task, ZIO}
+import zio.config._
 import zio.config.typesafe.TypesafeConfig
+import zio.{Layer, Task, ZIO}
 
 object ConfigReader {
   private lazy val configTask: Task[Config] = {

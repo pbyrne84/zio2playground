@@ -2,9 +2,9 @@ package com.github.pbyrne84.zio2playground.config
 
 import com.github.pbyrne84.zio2playground.BaseSpec
 import com.github.pbyrne84.zio2playground.testbootstrap.AllTestBootstrap
+import zio.ZIO
 import zio.test.TestAspect.sequential
 import zio.test._
-import zio.{Scope, ZIO}
 
 object ConfigReaderSpec extends BaseSpec {
 
@@ -12,7 +12,6 @@ object ConfigReaderSpec extends BaseSpec {
     suite("Config Reader")(
       suite("getDatabaseConfig") {
         test("reads the config successfully") {
-          println("banana")
           val expected = DbConfig(
             datasourceClassName = "org.postgresql.ds.PGSimpleDataSource",
             databaseName = "testdb",
@@ -24,7 +23,7 @@ object ConfigReaderSpec extends BaseSpec {
           for {
             _ <- reset
             config <- AllTestBootstrap.getParams
-            _ = println(config)
+            _ <- ZIO.logInfo(s"current config $config")
             actualConfig <- ZIO
               .service[DbConfig]
               .provide(ConfigReader.getDatabaseConfigLayer)
@@ -35,14 +34,13 @@ object ConfigReaderSpec extends BaseSpec {
       },
       suite("getRemoteServicesConfigLayer") {
         test("reads the config successfully") {
-          println("banana")
           for {
             _ <- reset
             config <- AllTestBootstrap.getParams
-            _ = println(config)
+            _ <- ZIO.logInfo(s"current config $config")
             expected = RemoteServicesConfig(
-              s"http://serverA:${config.serverAPort}",
-              s"http://serverB:${config.serverBPort}"
+              s"http://localhost:${config.serverAPort}",
+              s"http://localhost:${config.serverBPort}"
             )
             actual <- ZIO
               .service[RemoteServicesConfig]

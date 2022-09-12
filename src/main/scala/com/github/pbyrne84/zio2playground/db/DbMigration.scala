@@ -3,7 +3,7 @@ package com.github.pbyrne84.zio2playground.db
 import com.github.pbyrne84.zio2playground.config.DbConfig
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.output.MigrateResult
-import zio.{ULayer, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
 import scala.util.Try
 
