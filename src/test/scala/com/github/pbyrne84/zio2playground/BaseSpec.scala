@@ -7,10 +7,15 @@ import com.github.pbyrne84.zio2playground.testbootstrap.{
   InitialisedParams,
   RunOnceDbMigration
 }
+import zio.logging.backend.SLF4J
 import zio.test.ZIOSpec
 import zio.{ZIO, ZLayer}
 
 object BaseSpec {
+
+  // guarantee we are using this logger in all the tests
+  val logger = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+
   private val layer = {
     ZLayer.make[
       AllTestBootstrap with InitialisedParams with EnvironmentParamSetup
@@ -18,7 +23,8 @@ object BaseSpec {
       AllTestBootstrap.layer,
       RunOnceDbMigration.layer,
       InitialisedParams.layer,
-      EnvironmentParamSetup.layer
+      EnvironmentParamSetup.layer,
+      logger
     )
   }
 
@@ -31,7 +37,8 @@ object BaseSpec {
       AllTestBootstrap with ServerAWireMock with InitialisedParams with EnvironmentParamSetup
     ](
       BaseSpec.layer,
-      ServerAWireMock.layer
+      ServerAWireMock.layer,
+      logger
     )
   }
 
@@ -42,8 +49,6 @@ object BaseSpec {
 }
 
 abstract class BaseSpec extends ZIOSpec[BaseSpec.Shared] {
-
-  println("dsssss " + getClass)
 
   val bootstrap = BaseSpec.layerWithWireMock
 

@@ -3,7 +3,7 @@ package com.github.pbyrne84.zio2playground.logging
 import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import org.slf4j
-import org.slf4j.{LoggerFactory, MDC}
+import org.slf4j.LoggerFactory
 import zio.logging.backend.SLF4J
 import zio.telemetry.opentelemetry.Tracing
 import zio.{Cause, ZIO, ZIOAppDefault, ZIOHack, ZLayer}

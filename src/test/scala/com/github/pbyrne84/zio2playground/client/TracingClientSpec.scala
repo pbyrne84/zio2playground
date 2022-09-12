@@ -60,7 +60,7 @@ object TracingClientSpec extends BaseSpec with ClientOps {
         ChannelFactory.auto,
         zio.telemetry.opentelemetry.Tracing.live,
         TestZipkinTracer.live,
-        TracingClient.tracingClient,
+        TracingClient.tracingClientLayer,
         B3HTTPTracing.layer
       )
     )

@@ -18,13 +18,14 @@ class RunOnceDbMigration(hasRunRef: Ref.Synchronized[Boolean]) {
   def run(dbMigration: DbMigration): ZIO[Any, Nothing, Boolean] = {
     hasRunRef.modifyZIO { hasRun =>
       if (!hasRun) {
-        println("running db migration")
         for {
+          _ <- ZIO.logInfo("running db migration")
           _ <- dbMigration.run
         } yield (true -> true)
       } else {
-        println("already ran db migration")
-        ZIO.succeed(true -> true)
+        for {
+          _ <- ZIO.logInfo("already ran db migration")
+        } yield true -> true
       }
     }
 

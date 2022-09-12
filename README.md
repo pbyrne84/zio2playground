@@ -163,6 +163,46 @@ should not care about case-sensitivity on names.
 
 ### Examples
 
+#### Output from RoutesSpec
+
+***B3TracingOps.serverSpan*** creates a new span then makes sure those values are added to the logger.
+There is no magic like in Kamon so need to be aware that we may be creating spans, but they can be out of sync
+with what is logged. Less magic is good in the sense that we can observe things.
+
+You will see that parent span id f9550d1c8f78300b on the second entry relates to the span id on the first. 
+
+```json
+{
+  "@timestamp": "2022-09-13T11:50:39.571+01:00",
+  "@version": "1",
+  "message": "received a called traced service call with the id 433",
+  "logger_name": "com.github.pbyrne84.zio2playground.routes.Routes",
+  "thread_name": "zio-default-blocking-4",
+  "level": "INFO",
+  "level_value": 20000,
+  "span_name": "callTracedService",
+  "parent_span_id": "72f449d2d1e23744",
+  "trace_id": "f63279dda3c01ef3ef3bc27e2bb5c206",
+  "span_id": "f9550d1c8f78300b"
+}
+```
+
+```json
+{
+  "@timestamp": "2022-09-13T11:50:39.571+01:00",
+  "@version": "1",
+  "message": "calling http://localhost:50828/downstream/433",
+  "logger_name": "com.github.pbyrne84.zio2playground.client.ExternalApiService",
+  "thread_name": "zio-default-blocking-4",
+  "level": "INFO",
+  "level_value": 20000,
+  "span_name": "ExternalApiService.callApi",
+  "parent_span_id": "f9550d1c8f78300b",
+  "trace_id": "f63279dda3c01ef3ef3bc27e2bb5c206",
+  "span_id": "482156f6269286ab"
+}
+```
+
 #### TracingClientSpec
 
 This examples reading the current context and adding it to a client calls headers using layering to achieve this.

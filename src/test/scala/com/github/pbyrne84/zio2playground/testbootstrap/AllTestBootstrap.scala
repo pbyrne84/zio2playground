@@ -29,8 +29,6 @@ class AllTestBootstrap(
     initialisedParams: InitialisedParams
 ) {
 
-  println("ssssss " + getClass)
-
   def reset: ZIO[Any, Throwable, Unit] = {
     for {
 
@@ -44,7 +42,7 @@ class AllTestBootstrap(
         .service[DbMigration]
         .provide(DbMigration.layer, ConfigReader.getDatabaseConfigLayer)
       newCount <- counter.modify(count => (count + 1, count + 1))
-      _ = println(s"Called x times ${newCount}")
+      _ = ZIO.logInfo(s"Called x times ${newCount}")
       _ <- runOnceDbMigration.run(dbMigration)
     } yield ()
   }

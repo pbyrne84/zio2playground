@@ -4,15 +4,10 @@ import com.github.pbyrne84.zio2playground.client.B3
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.context.{Context, ContextKey}
 import zhttp.http.Headers
-import zio.{URIO, ZIO, ZLayer}
 import zio.telemetry.opentelemetry.Tracing
+import zio.{URIO, ZIO, ZLayer}
 
-object HTTPTracing {
-
-  val default: HTTPTracing = new HTTPTracing {
-    override def appendHeaders(headers: Headers) = ZIO.succeed(headers)
-  }
-}
+object HTTPTracing {}
 
 trait HTTPTracing {
   def appendHeaders(headers: Headers): ZIO[Tracing, Nothing, Headers]
@@ -22,6 +17,11 @@ trait HTTPTracing {
 
 object B3HTTPTracing {
   val layer: ZLayer[Any, Nothing, B3HTTPTracing] = ZLayer(ZIO.succeed(new B3HTTPTracing))
+
+  def appendHeaders(currentHeaders: Headers): ZIO[Tracing with B3HTTPTracing, Nothing, Headers] = {
+    ZIO.serviceWithZIO[B3HTTPTracing](_.appendHeaders(currentHeaders))
+  }
+
 }
 
 class B3HTTPTracing extends HTTPTracing {

@@ -1,21 +1,19 @@
 package com.github.pbyrne84.zio2playground.tracing
 
+import com.typesafe.scalalogging.StrictLogging
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.trace.`export`.SpanExporter
 import io.opentelemetry.sdk.trace.data.SpanData
 
 import java.util
 import scala.jdk.CollectionConverters.CollectionHasAsScala
-class DummySpanExporter extends SpanExporter {
+class DummySpanExporter extends SpanExporter with StrictLogging {
   override def `export`(spans: util.Collection[SpanData]): CompletableResultCode = {
     spans.asScala.foreach { (span: SpanData) =>
-      println("DummySpanExporter.export " + span)
-
-      span.getParentSpanId
-      println(span.getClass)
+      logger.info("DummySpanExporter.export exporting " + span)
     }
 
-    new CompletableResultCode()
+    CompletableResultCode.ofSuccess()
   }
 
   override def flush(): CompletableResultCode = ???

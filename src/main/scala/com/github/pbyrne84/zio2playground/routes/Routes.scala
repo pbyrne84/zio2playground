@@ -2,11 +2,18 @@ package com.github.pbyrne84.zio2playground.routes
 
 import com.github.pbyrne84.zio2playground.Builds
 import com.github.pbyrne84.zio2playground.Builds.RoutesBuild
+import com.github.pbyrne84.zio2playground.client.{ExternalApiService, TracingClient}
 import com.github.pbyrne84.zio2playground.db.PersonRepo
+import com.github.pbyrne84.zio2playground.tracing.{
+  B3HTTPTracing,
+  B3TracingOps,
+  NonExportingB3Tracer
+}
 import zhttp.http._
 import zhttp.service.server.ServerChannelFactory
-import zhttp.service.{EventLoopGroup, Server}
+import zhttp.service.{ChannelFactory, EventLoopGroup, Server}
 import zio._
+import zio.logging.backend.SLF4J
 
 import scala.util.Try
 
@@ -14,13 +21,13 @@ object Routes extends ZIOAppDefault {
   // Set a port
   private val PORT = 58479
 
-  val routesLayer: ZLayer[PersonRepo with Random with Clock, Nothing, Routes] = ZLayer {
+  val routesLayer: ZLayer[PersonRepo, Nothing, Routes] = ZLayer {
     for {
-      clock <- ZIO.service[Clock]
-      random <- ZIO.service[Random]
       personRepo <- ZIO.service[PersonRepo]
-    } yield (new Routes(clock, random, personRepo))
+    } yield (new Routes(personRepo))
   }
+
+  private val loggingLayer = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   val run = RoutesBuild.routesBuild.flatMap { routes: Routes =>
 
@@ -42,19 +49,31 @@ object Routes extends ZIOAppDefault {
         // Ensures the server doesn't die after printing
           *> ZIO.never,
       )
-      .provide(ServerChannelFactory.auto, EventLoopGroup.auto(nThreads), Scope.default)
+      .provide(
+        ServerChannelFactory.auto,
+        EventLoopGroup.auto(nThreads),
+        Scope.default,
+        ExternalApiService.live,
+        ChannelFactory.auto,
+        zio.telemetry.opentelemetry.Tracing.live,
+        TracingClient.tracingClientLayer,
+        NonExportingB3Tracer.live,
+        B3HTTPTracing.layer,
+        loggingLayer
+      )
   }
 
   }
 
 }
 
-class Routes(clock: Clock, random: Random, personRepo: PersonRepo) {
+class Routes(personRepo: PersonRepo) extends B3TracingOps {
 
-  val routes: Http[Any with Scope, Throwable, Request, Response] = Http.collectZIO[Request] {
-    case Method.GET -> !! / "random" => random.nextString(10).map(Response.text(_))
-    case Method.GET -> !! / "utc" => clock.currentDateTime.map(s => Response.text(s.toString))
-    case Method.GET -> !! / "banana" => clock.currentDateTime.map(s => Response.text(s.toString))
+  val routes = Http.collectZIO[Request] {
+    // int() is hiding in the RouteDecoderModule, could not find it in any examples but I may be blind
+    case req @ Method.GET -> !! / "proxy" / int(id) =>
+      callTracedService(req, id)
+
     case Method.GET -> !! / "delete1" =>
       Builds.PersonServiceBuild.personServiceBuild
         .flatMap(_.deletePeople().map((deleteCount: Long) => Response.text(deleteCount.toString)))
@@ -68,6 +87,25 @@ class Routes(clock: Clock, random: Random, personRepo: PersonRepo) {
     case Method.GET -> !! / "delete3" =>
       personRepo.deletePeople().map((deleteCount: Long) => Response.text(deleteCount.toString))
 
+  }
+
+  private def callTracedService(req: Request, id: RuntimeFlags) = {
+    B3TracingOps
+      .serverSpan("callTracedService") {
+        for {
+          _ <- ZIO.logInfo(s"received a called traced service call with the id $id")
+          result <- ExternalApiService
+            .callApi(id)
+          headersWithTracing <- B3HTTPTracing.appendHeaders(
+            Headers(HeaderNames.contentType, HeaderValues.textPlain)
+          )
+        } yield {
+          Response.text(result.data.toString).copy(headers = headersWithTracing)
+        }
+      }
+
+      //
+      .headerB3Trace(req.headers)
   }
 
 }

@@ -1,9 +1,6 @@
 package com.github.pbyrne84.zio2playground.logging
 
-import org.slf4j.MDC
 import zio.logging.LogAnnotation
-
-import scala.jdk.CollectionConverters.MapHasAsScala
 
 object ExampleLogAnnotations {
   val stringTraceId: LogAnnotation[String] = LogAnnotation[String](
