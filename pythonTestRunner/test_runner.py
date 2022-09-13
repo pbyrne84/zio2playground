@@ -7,7 +7,12 @@ test_cache_file = f"{runner_dir}/previous_test.txt"
 
 
 def run_test(name: str):
-    subprocess.call(["run_test.bat", name],
+    if os.sep == "/":
+        ext = "sh"
+    else:
+        ext = "bat"
+
+    subprocess.call(["run_test." + ext, name],
                     stdin=subprocess.PIPE,
                     universal_newlines=True,
                     shell=True,

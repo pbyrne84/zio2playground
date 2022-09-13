@@ -76,13 +76,17 @@ class LoggingSL4JExample {
       .serverSpan(spanName) {
         for {
           _ <- ZIO.logInfo("I am the devil")
-          _ <- ZIO.attempt {
-            javaUtilLogger.severe(s"meow $getThreadName")
-          }
+
           // this will set the mdc from the logging context and then reset it back after
           // similarly to how the zio.logging.backend.SL4J.closeLogEntry operates.
           // ZIOHack as the name implies is a hack. It abuses package name to get access.
           // Definitely a less than ideal solution however adult anyone feels.
+          _ <- ZIOHack.attemptWithMdcLogging {
+            javaUtilLogger.severe(s"util meowWithMdc $getThreadName")
+          }
+          _ <- ZIO.attempt {
+            javaUtilLogger.severe(s"util meowWithNoMdcMdc $getThreadName")
+          }
           _ <- ZIOHack.attemptWithMdcLogging(sl4jLogger.info(s"woofWithMdc $getThreadName"))
           _ <- ZIOHack.attemptWithMdcLogging2(sl4jLogger.info(s"woofWithMdc2 $getThreadName"))
           _ <- ZIO.attempt(sl4jLogger.info(s"woofNoMdc $getThreadName"))

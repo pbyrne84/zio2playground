@@ -2,7 +2,6 @@ package com.github.pbyrne84.zio2playground.db
 import com.github.pbyrne84.zio2playground.Builds.PersonServiceBuild
 import com.github.pbyrne84.zio2playground.{BaseSpec, Builds}
 import org.mockito.Mockito
-import zio.test.Assertion._
 import zio.test.TestAspect.sequential
 import zio.test._
 import zio.{Scope, ZIO, ZLayer}
