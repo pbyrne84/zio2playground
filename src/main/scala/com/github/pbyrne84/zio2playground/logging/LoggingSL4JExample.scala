@@ -1,5 +1,6 @@
 package com.github.pbyrne84.zio2playground.logging
 
+import com.github.pbyrne84.zio2playground.tracing.HeaderTextMapGetter
 import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import org.slf4j
@@ -63,7 +64,7 @@ class LoggingSL4JExample {
         DummyTracing.traceIdField -> "01115d8eb7e102b505085969c4aca859",
         DummyTracing.spanIdField -> "40ce80b7c43f2884"
       ),
-      getter = DummyTracing.headerTextMapGetter,
+      getter = new HeaderTextMapGetter(),
       spanName = "span-name",
       spanKind = SpanKind.SERVER
     )

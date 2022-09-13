@@ -36,20 +36,4 @@ object DummyTracing extends StrictLogging {
     }
   }
 
-  // case insensitive on keys as headers should not be case sensitive on those
-  // people have monkey hands
-  val headerTextMapGetter: TextMapGetter[List[(String, String)]] =
-    new TextMapGetter[List[(String, String)]] {
-      override def keys(carrier: List[(String, String)]) = {
-        logger.info(s"$carrier")
-        carrier.map(_._1.toLowerCase).asJava
-      }
-
-      override def get(carrier: List[(String, String)], key: String): String = {
-        logger.info(s"get $carrier -  $key")
-        // headers should be case insensitive
-        carrier.find(_._1.toLowerCase == key.toLowerCase).map(_._2).orNull
-      }
-    }
-
 }
