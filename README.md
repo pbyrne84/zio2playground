@@ -1,5 +1,31 @@
 # zio2playground
 
+A repo that covers 
+
+1. Service layering in tests including shared layering. As mentioned there are some gotchas.
+2. How to set up an external tool in intellij so you can run a test without a plugin without 
+   having to focus off the code window. Switching to command prompt is annoying etc.
+3. Tracing through the application using OpenTelemetry so we can have Zipkin etc. This includes setting 
+   current context from incoming headers as we want to keep trace and parent span to span relations else it 
+   cannot be visualised.
+4. How we log the trace in the logging, so we can get some kibana or whatever goodness. This uses logback 
+   as not everything is likely to be pure ZIO.log stuff in an application. There is an example of monkeying around
+   with the MDC in **LoggingSL4JExample**. This handles java util and direct SL4J logging which probably simulates a lot 
+   of production environments. For example, I don't think a functionally pure version of PAC4J is on anyone's todo list. 
+   Anything security based should be implemented as few times as possible, unless you like crackers.
+    
+   <br/>MDC stuff does have its limitations due to issues with copying between threads but ideally async
+   is being done by the effect system and the java stuff is not async by nature.
+
+   It is a bit hacky but an idea of how to do it as I had to hijack the zio packaged to read the fiber ref to get the 
+   **zio.logging.logContext** where this is held.
+
+   **B3TracingOps.serverSpan** creates a span and add it to the logging context.
+   
+5. As mentioned the ZIO.log does add to the MDC but only for that call. The logback.xml config adds all MDC
+   to the log hence number **LoggingSL4JExample** is doing something similar for the java logging calls.
+
+
 ## Testing
 
 Currently, tests kind of work in Intellij. They run as a main class which means things like shared 

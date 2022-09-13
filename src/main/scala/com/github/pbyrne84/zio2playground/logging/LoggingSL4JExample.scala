@@ -1,6 +1,6 @@
 package com.github.pbyrne84.zio2playground.logging
 
-import com.github.pbyrne84.zio2playground.tracing.HeaderTextMapGetter
+import com.github.pbyrne84.zio2playground.tracing.{B3TracingOps, HeaderTextMapGetter}
 import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import org.slf4j
@@ -70,65 +70,36 @@ class LoggingSL4JExample {
     )
   }
 
-  val errorMapper: PartialFunction[Any, StatusCode] = { case a =>
-    StatusCode.UNSET
-  }
-
   private def createOperation(spanName: String) = {
     // Wrap like this to get child spans
-    Tracing
-      .span(spanName, SpanKind.SERVER, errorMapper) {
+    B3TracingOps
+      .serverSpan(spanName) {
         for {
-          _ <- wrapOperationInTrace {
-            for {
-              _ <- ZIO.logInfo("I am the devil")
-              _ <- ZIO.attempt {
-                javaUtilLogger.severe(s"meow $getThreadName")
-              }
-              // this will set the mdc from the logging context and then reset it back after
-              // similarly to how the zio.logging.backend.SL4J.closeLogEntry operates.
-              // ZIOHack as the name implies is a hack. It abuses package name to get access.
-              // Definitely a less than ideal solution however adult anyone feels.
-              _ <- ZIOHack.attemptWithMdcLogging(sl4jLogger.info(s"woofWithMdc $getThreadName"))
-              _ <- ZIOHack.attemptWithMdcLogging2(sl4jLogger.info(s"woofWithMdc2 $getThreadName"))
-              _ <- ZIO.attempt(sl4jLogger.info(s"woofNoMdc $getThreadName"))
-              a = new RuntimeException("I had problems and the ice cream didn't help")
-              _ <- ZIO.logCause("dying for a cause", Cause.die(a))
-            } yield ()
-          }.@@(ExampleLogAnnotations.kitty("kitty"))
-        } yield {
-          ()
-        }
-      }
+          _ <- ZIO.logInfo("I am the devil")
+          _ <- ZIO.attempt {
+            javaUtilLogger.severe(s"meow $getThreadName")
+          }
+          // this will set the mdc from the logging context and then reset it back after
+          // similarly to how the zio.logging.backend.SL4J.closeLogEntry operates.
+          // ZIOHack as the name implies is a hack. It abuses package name to get access.
+          // Definitely a less than ideal solution however adult anyone feels.
+          _ <- ZIOHack.attemptWithMdcLogging(sl4jLogger.info(s"woofWithMdc $getThreadName"))
+          _ <- ZIOHack.attemptWithMdcLogging2(sl4jLogger.info(s"woofWithMdc2 $getThreadName"))
+          _ <- ZIO.attempt(sl4jLogger.info(s"woofNoMdc $getThreadName"))
+          a = new RuntimeException("I had problems and the ice cream didn't help")
+          _ <- ZIO.logCause("dying for a cause", Cause.die(a))
+        } yield ()
+      } @@ ExampleLogAnnotations.kitty("kitty")
+  }
 
-    // will only have kitty added to the 2 native zio logging calls. Not really debuggable as the annotation code does
-    // call the MDC stuff in SL4J scala
+  // will only have kitty added to the 2 native zio logging calls. Not really debuggable as the annotation code does
+  // call the MDC stuff in SL4J scala
 //    override def appendKeyValue( key: String, value: String ): Unit = {
 //      mdc.put( key, value )
 //      ()
 //    }
 
-  }
-
   private def getThreadName =
     Thread.currentThread().getName
-
-  private def wrapOperationInTrace[A, B, C](call: => ZIO[A, B, C]) = {
-    import TracingOps._
-
-    for {
-      span <- Tracing.getCurrentSpan
-      spanContext = span.getSpanContext
-      traceId = spanContext.getTraceId
-      spanId = spanContext.getSpanId
-      parentSpanId = span.maybeParentSpanId.getOrElse("???")
-      snapName = span.maybeName.getOrElse("unknown")
-
-      result <- call @@ ExampleLogAnnotations.stringTraceId(traceId) @@
-        ExampleLogAnnotations.parentSpanId(parentSpanId) @@
-        ExampleLogAnnotations.stringSpanId(spanId) @@
-        ExampleLogAnnotations.stringSpanName(snapName)
-    } yield result
-  }
 
 }
