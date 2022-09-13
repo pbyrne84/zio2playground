@@ -16,7 +16,7 @@ object PersonRepoSpec extends BaseSpec with QuillDbConfig {
         personService <- PersonServiceBuild.personServiceBuild
         _ <- personService.deletePeople()
         count <- personService.addPerson(Person(43, "a", "b", 400))
-      } yield (assert(count)(equalTo(1L)))
+      } yield assertTrue(count == 1L)
     },
     test("adds a person via the repo") {
       for {
@@ -24,14 +24,14 @@ object PersonRepoSpec extends BaseSpec with QuillDbConfig {
         personRepo <- Builds.PersonRepoBuild.personRepoBuild
         _ <- personRepo.deletePeople()
         count <- personRepo.addPerson(Person(43, "a", "b", 400))
-      } yield (assert(count)(equalTo(1L)))
+      } yield assertTrue(count == 1L)
     },
     test("adds a person to the repo using provided layers") {
       for {
         _ <- reset
         _ <- PersonRepo.deletePeople()
         count <- PersonRepo.addPerson(Person(43, "a", "b", 400))
-      } yield (assert(count)(equalTo(1L)))
+      } yield assertTrue(count == 1L)
     }.provideSome[BaseSpec.Shared](Builds.PersonRepoBuild.personRepoMake)
     /*
       Builds.PersonRepoBuild.personRepoMake hides the quill connectivity as things like that can vary per instance across the project.
