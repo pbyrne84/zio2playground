@@ -42,7 +42,7 @@ trait B3TracingOps {
 
   private val propagator: TextMapPropagator = B3Propagator.injectingMultiHeaders()
 
-  private val getter: ZIOHeaderTextMapGetter = new ZIOHeaderTextMapGetter()
+  private val getter: HeaderTextMapGetter = new HeaderTextMapGetter()
 
   implicit class B3Ops[A, B, C](operation: ZIO[A, B, C]) {
 
