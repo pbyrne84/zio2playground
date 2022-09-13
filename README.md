@@ -3,35 +3,36 @@
 A repo that covers 
 
 1. Service layering in tests including shared layering. As mentioned there are some gotchas.
-2. How to set up an external tool in intellij so you can run a test without a plugin without 
-   having to focus off the code window. Switching to command prompt is annoying etc.
-3. Tracing through the application using OpenTelemetry so we can have Zipkin etc. This includes setting 
-   current context from incoming headers as we want to keep trace and parent span to span relations else it 
-   cannot be visualised.
-4. How we log the trace in the logging, so we can get some kibana or whatever goodness. This uses logback 
-   as not everything is likely to be pure ZIO.log stuff in an application. There is an example of monkeying around
+2. How to set up an external tool in intellij, this enables run a test without a plugin without 
+   having to focus off a coding tab. 
+3. Tracing through the application using OpenTelemetry, this enables Zipkin etc. This includes setting 
+   current context from incoming headers. We want to keep the trace across system boundaries. 
+   Not having this sort of stuff can make a fun day a much less than fun day.
+4. How we log the trace in the logging, so we can get some kibana or similar goodness. This imlementation uses logback 
+   as not everything is likely to be pure ZIO.log in an application. There is an example of monkeying around
    with the MDC in **LoggingSL4JExample**. This handles java util and direct SL4J logging which probably simulates a lot 
    of production environments. For example, I don't think a functionally pure version of PAC4J is on anyone's todo list. 
    Anything security based should be implemented as few times as possible, unless you like crackers.
     
-   <br/>MDC stuff does have its limitations due to issues with copying between threads but ideally async
+   <br/>MDC stuff does have its limitations due to issues with copying between threads, ideally async
    is being done by the effect system and the java stuff is not async by nature.
 
-   It is a bit hacky but an idea of how to do it as I had to hijack the zio packaged to read the fiber ref to get the 
+   It is a bit hacky but an idea of how to do it, I had to hijack the zio package to read the fiber ref to get the 
    **zio.logging.logContext** where this is held.
 
    **B3TracingOps.serverSpan** creates a span and add it to the logging context.
    
-5. As mentioned the ZIO.log does add to the MDC but only for that call. The logback.xml config adds all MDC
+5. ZIO.log does add to the MDC but only for that call. The logback.xml config adds all MDC
    to the log hence number **LoggingSL4JExample** is doing something similar for the java logging calls.
 
 
 ## Testing
 
 Currently, tests kind of work in Intellij. They run as a main class which means things like shared 
-services across tests behave very weird.
+services across tests behave very weird. Having the ZIO plugin would fix that but at this point in time
+it is not ZIO2 compatible.
 
-The instructions for doing this can be found in the following video.
+The instructions for sharing services across tests can be found in the following video.
 
 **Zymposium - Sharing Expensive Services Across Specs**
 https://www.youtube.com/watch?v=gzHStYNa6Og&t=878s
@@ -47,12 +48,31 @@ sbt "Test/runMain com.github.pbyrne84.zio2playground.sharedlayer.TestA"
 which outputs 
 
 ```shell
-created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService T
-hread[ZScheduler-Worker-11,5,main]
-created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService T
-hread[ZScheduler-Worker-8,5,main]
-created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService T
-hread[ZScheduler-Worker-9,5,main]
+{
+  "@timestamp": "2022-09-13T14:56:23.54+01:00",
+  "@version": "1",
+  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expens  iveService Thread[ZScheduler-Worker-9,5,main]",
+  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
+  "thread_name": "ZScheduler-Worker-9",
+  "level": "INFO",
+  "level_value": 20000
+}{
+  "@timestamp": "2022-09-13T14:56:23.662+01:00",
+  "@version": "1",
+  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expen  siveService Thread[ZScheduler-Worker-10,5,main]",
+  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
+  "thread_name": "ZScheduler-Worker-10",
+  "level": "INFO",
+  "level_value": 20000
+}{
+  "@timestamp": "2022-09-13T14:56:23.879+01:00",
+  "@version": "1",
+  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expen  siveService Thread[ZScheduler-Worker-0,5,main]",
+  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
+  "thread_name": "ZScheduler-Worker-0",
+  "level": "INFO",
+  "level_value": 20000
+}
 ```
 
 while running 
@@ -61,11 +81,18 @@ while running
 sbt "Test/testOnly com.github.pbyrne84.zio2playground.sharedlayer.TestA"
 ```
 
-outputs
+outputs just one instance
 
 ```shell
-created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService T
-hread[ZScheduler-Worker-11,5,main]
+{
+  "@timestamp": "2022-09-13T14:57:44.966+01:00",
+  "@version": "1",
+  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveServ  ice Thread[ZScheduler-Worker-5,5,main]",
+  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
+  "thread_name": "ZScheduler-Worker-5",
+  "level": "INFO",
+  "level_value": 20000
+}
 ```
 
 meaning the expensive service is only created once.
@@ -83,37 +110,38 @@ https://github.com/zio/zio-test-intellij
 https://www.jetbrains.com/help/idea/settings-tools-external-tools.html
 
 External tools allow you to set up custom operations to run from Intellij. They have a set of macros that can be 
-passed to the external tool such as the line number $LineNumber$ or the file path relative to source path $FilePathRelativeToSourcepath$.
+passed to the external tool such as the line number $LineNumber$ or the file path relative to source path **$FilePathRelativeToSourcepath$**.
 $FilePathRelativeToSourcepath$ is useful as we can calculate the test class to run from that and call sbt run that tests.
 
 ![external_tool.png](pythonTestRunner\external_tool.png)
 
 #### test_runner.py
-This takes the argument passed from the external tool and if ends in Test or Spec runs that test. Else it runs the 
+This takes the argument passed from the external tool and if the file ends in Test or Spec runs that test. Else it runs the 
 previous test. This is so you can write the tests first (like children who will get more than coal at Christmas), run the 
 tests proving they fail, then switch to the implementation while running the tests without having to go back to the test
-or command line. 
+or command line. Keeping the flow. 
 
 (CMD|CTRL)+shift+a opens the run action allowing you to type the name of the external tool and run it that way,
 it remembers the last thing you typed, you can just open it again and press enter to retry. This is not as elegant 
 as the usual shift+f10 or CMD+R which runs the last run action but still it is better than flicking around in 
-panels or tabs running things. 
+panels or tabs needlessly. 
 
 This is just an example, it is tied to being in a subfolder in this project purely because I needed to set up a python
 sdk in a scala project as a submodule.
 
-If you were really adventurous you could get the line number and only run that test case. 
-
+If you were really adventurous you could get the line number and search backwards for the test name and then only run 
+that test case.
 
 #### problems
 This does not solve the problem of easily debugging though that could probably be done.
 
 
-
 ## Logging and tracing
-We need a **spanFrom** an operation to enable tracing
+We need a **spanFrom**  operation to initialise tracing with a starting value such as an incoming headers or to 
+generate one if there is the headers do not exist.
 
 e.g.
+### Example from LoggingSL4JExample
 ```scala
 // extension methods for ZIO (spanFrom in this case)
 import zio.telemetry.opentelemetry.TracingSyntax.OpenTelemetryZioOps
@@ -133,7 +161,6 @@ operations.spanFrom(
 
 ```
 
-
 ### Initialisation of trace ids
 Using open telemetry we have the following parts 
 
@@ -146,7 +173,7 @@ TextMapGetter is called by the TextMapPropagator to interface with the values an
 
 An example implementation of the TextMapPropagator is 
 
-//B3PropagatorExtractorMultipleHeaders
+**B3PropagatorExtractorMultipleHeaders**
 
 ```scala
 val propagator: TextMapPropagator = B3Propagator.injectingMultiHeaders()
@@ -231,7 +258,7 @@ You will see that parent span id f9550d1c8f78300b on the second entry relates to
 
 #### TracingClientSpec
 
-This examples reading the current context and adding it to a client calls headers using layering to achieve this.
+This examples reading the current context and adding it to a client calls headers using ZIO layering to achieve this.
 We are allowing the ids to be autogenerated. The reporter will complain it cannot talk to a real service, this is ignorable.
 
 #### LoggingSL4JExample
@@ -240,49 +267,54 @@ This reads from a dummy TextMapPropagator and TextMapGetter found in DummyTracin
 with field names matching the expected field names. The sl4j bridge is being used as we have things doing logging 
 via java util which is being handled by the **jul-to-slf4j** library.
 
-The limitations of going to sl4j from zio is the trace id is missing from these values so less than ideal. As we 
-have an environment with logback.xml etc. in the environment is hard to debug. Playing with the Slf4jBridgeSpec in the 
-logging repo custom annotations seem to not appear there either. We can add things to the MDC with 
-
-```scala
-_ <- ZIO.succeed(MDC.put("trace_id", traceId))
-_ <- ZIO.succeed(MDC.put("span_name", snapName))
-_ <- ZIO.succeed(MDC.put("span_id", spanId))
-```
-
-Which will ensure things get put onto direct sl4j and util logging calls. It appears closeLogEntry gets called and
-that shifts the MDC about
-
-```sh
-appending slf4j_logger_name - zio.logging.example.UserOperation - ZScheduler-Worker-2
-appending kitty - kitty - ZScheduler-Worker-2
-appending trace_id - 01115d8eb7e102b505085969c4aca859 - ZScheduler-Worker-2
-appending span_name - banana1 - ZScheduler-Worker-2
-appending user_id - user-id - ZScheduler-Worker-2
-appending parent_span_id - b2ccda77dae84661 - ZScheduler-Worker-2
-appending span_id - 275c55e516c0cdca - ZScheduler-Worker-2
-closeLogEntry - ZScheduler-Worker-2
-```
-
-The closeLogEntry has the following code
-https://github.com/zio/zio-logging/blob/8e64f982e501635be7dda8b27de07dc4e99491a2/slf4j/src/main/scala/zio/logging/slf4j/SLF4J.scala#L106
-```scala
-val previous =
-  if (!mdc.isEmpty) {
-    val previous =
-      Some(Option(MDC.getCopyOfContextMap).getOrElse(java.util.Collections.emptyMap[String, String]()))
-    MDC.setContextMap(mdc)
-    previous
-  } else None
-```
-
-**previous** is set in the MDC after the ZIO logging call meaning it is not available to non ZIO logging calls. 
 
 ##### ZIOHack.attemptWithMdcLogging
 As the name suggest this a hack. It pretends to live in the world of the zio package which gives us the ability to 
 write a custom zio attempt operation. The FiberRuntime has LogContext in it with all our logging goodies which we 
-would like applied to logging calls ZIO has no interaction with.
+would like applied to logging calls via MDC ZIO has no control over.
 
+```scala
+// needed for util->sl4j logging
+SLF4JBridgeHandler.install()
+
+for {
+   _ <- ZIOHack.attemptWithMdcLogging {
+      javaUtilLogger.severe(s"util meowWithMdc $getThreadName")
+   }
+   _ <- ZIO.attempt {
+      javaUtilLogger.severe(s"util meowWithNoMdcMdc $getThreadName")
+   }
+} yield ()
+```
+produces
+```sh
+{
+  "@timestamp": "2022-09-13T15:23:09.539+01:00",
+  "@version": "1",
+  "message": "util meowWithMdc ZScheduler-Worker-4",
+  "logger_name": "com.github.pbyrne84.zio2playground.logging.LoggingSL4JExample",
+  "thread_name": "ZScheduler-Worker-4",
+  "level": "ERROR",
+  "level_value": 40000,
+  "span_name": "banana2",
+  "parent_span_id": "c234dec741f08fcb",
+  "trace_id": "01115d8eb7e102b505085969c4aca859",
+  "user_id": "user-id",
+  "span_id": "20f2acf6460baf0c",
+  "kitty": "kitty"
+}{
+  "@timestamp": "2022-09-13T15:23:09.541+01:00",
+  "@version": "1",
+  "message": "util meowWithNoMdcMdc ZScheduler-Worker-4",
+  "logger_name": "com.github.pbyrne84.zio2playground.logging.LoggingSL4JExample",
+  "thread_name": "ZScheduler-Worker-4",
+  "level": "ERROR",
+  "level_value": 40000
+}
+```
+Note the MDC is flushed after the first call.
+
+**Code that does the magic**
 ```scala
 def attemptWithMdcLogging[A](code: => A)(implicit trace: Trace): Task[A] =
   ZIO.withFiberRuntime[Any, Throwable, A] { (fiberState: FiberRuntime[Throwable, A], _) =>
