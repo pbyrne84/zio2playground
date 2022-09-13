@@ -113,7 +113,7 @@ External tools allow you to set up custom operations to run from Intellij. They 
 passed to the external tool such as the line number $LineNumber$ or the file path relative to source path **$FilePathRelativeToSourcepath$**.
 $FilePathRelativeToSourcepath$ is useful as we can calculate the test class to run from that and call sbt run that tests.
 
-![external_tool.png](pythonTestRunner\external_tool.png)
+![external_tool.png](pythonTestRunner/external_tool.png)
 
 #### test_runner.py
 This takes the argument passed from the external tool and if the file ends in Test or Spec runs that test. Else it runs the 
