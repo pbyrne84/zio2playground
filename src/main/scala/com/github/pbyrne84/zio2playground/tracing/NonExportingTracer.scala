@@ -10,6 +10,7 @@ import io.opentelemetry.sdk.trace.data.SpanData
 import zio.{ZIO, ZLayer}
 
 import java.util
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 /** We are not going to send the span details anywhere, we are just going to manage the creation of
   * child spans etc.
@@ -17,18 +18,24 @@ import java.util
   * TracerProvider.noop().tracerBuilder("").build() build something that does not create child span
   * ids and it makes things confusing if we are trying to see child spans etc.
   */
-object NonExportingB3Tracer extends StrictLogging {
+object NonExportingTracer extends StrictLogging {
 
   private val spanExporter = new SpanExporter {
-    override def `export`(spans: util.Collection[SpanData]): CompletableResultCode =
+    override def `export`(spans: util.Collection[SpanData]): CompletableResultCode = {
+
+      spans.asScala.foreach(span => logger.info(s"exporting span $span"))
+
+      CompletableResultCode.ofSuccess()
+    }
+
+    override def flush(): CompletableResultCode =
       CompletableResultCode.ofSuccess()
 
-    override def flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
-
-    override def shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
+    override def shutdown(): CompletableResultCode =
+      CompletableResultCode.ofSuccess()
   }
 
-  def live: ZLayer[Any, Throwable, Tracer] = ZLayer(
+  val live: ZLayer[Any, Throwable, Tracer] = ZLayer(
     for {
       spanProcessor <- ZIO.succeed(SimpleSpanProcessor.create(spanExporter))
       tracerProvider <- ZIO.succeed(

@@ -1,10 +1,35 @@
 package com.github.pbyrne84.zio2playground.tracing
 
 import com.github.pbyrne84.zio2playground.BaseSpec
+import com.github.pbyrne84.zio2playground.client.B3
+import io.opentelemetry.api.trace.{SpanKind, Tracer}
 import zio.{Scope, ZIO}
 import zio.telemetry.opentelemetry.Tracing
 import zio.test._
-object ManualTraceInitialisationSpec extends ZIOSpecDefault with B3TracingOps {
+object ManualTraceInitialisationSpec extends ZIOSpecDefault {
+
+  implicit class B3Ops[A, B, C](operation: ZIO[A, B, C]) {
+    def manualB3Trace(
+        tracedId: String,
+        spanId: String
+    ): ZIO[A with Tracer with Tracing, B, C] = {
+      // spanFrom extension method. Eye level is buy level.
+      import zio.telemetry.opentelemetry.TracingSyntax.OpenTelemetryZioOps
+
+      operation
+        .spanFrom(
+          propagator = B3Tracing.b3Propagator,
+          carrier = List(
+            B3.header.traceId -> tracedId,
+            B3.header.spanId -> spanId,
+            B3.header.sampled -> "1"
+          ),
+          getter = B3Tracing.headerTextMapGetter,
+          spanName = "span-name",
+          spanKind = SpanKind.SERVER
+        )
+    }
+  }
 
   /*
     SdkSpanBuilder.startSpan() creates the span

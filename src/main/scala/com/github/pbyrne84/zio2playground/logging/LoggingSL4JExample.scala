@@ -1,6 +1,6 @@
 package com.github.pbyrne84.zio2playground.logging
 
-import com.github.pbyrne84.zio2playground.tracing.{B3TracingOps, HeaderTextMapGetter}
+import com.github.pbyrne84.zio2playground.tracing.{B3Tracing, HeaderTextMapGetter}
 import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import org.slf4j
@@ -72,7 +72,7 @@ class LoggingSL4JExample {
 
   private def createOperation(spanName: String) = {
     // Wrap like this to get child spans
-    B3TracingOps
+    B3Tracing
       .serverSpan(spanName) {
         for {
           _ <- ZIO.logInfo("I am the devil")

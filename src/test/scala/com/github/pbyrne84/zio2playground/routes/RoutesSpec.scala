@@ -5,16 +5,11 @@ import com.github.pbyrne84.zio2playground.BaseSpec.Shared
 import com.github.pbyrne84.zio2playground.client.{B3, ExternalApiService, TracingClient}
 import com.github.pbyrne84.zio2playground.config.ConfigReader
 import com.github.pbyrne84.zio2playground.db.PersonRepo
-import com.github.pbyrne84.zio2playground.routes.RoutesSpec.getHeaderValue
 import com.github.pbyrne84.zio2playground.testbootstrap.AllTestBootstrap
 import com.github.pbyrne84.zio2playground.testbootstrap.extensions.ClientOps
 import com.github.pbyrne84.zio2playground.testbootstrap.wiremock.ServerAWireMock
-import com.github.pbyrne84.zio2playground.tracing.{
-  B3HTTPTracing,
-  B3TracingOps,
-  NonExportingB3Tracer,
-  TestZipkinTracer
-}
+import com.github.pbyrne84.zio2playground.tracing.{B3HTTPResponseTracing, NonExportingTracer}
+import io.opentelemetry.api.trace.Tracer
 import org.mockito.Mockito
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zhttp.http._
@@ -23,15 +18,15 @@ import zio.logging.backend.SLF4J
 import zio.telemetry.opentelemetry.Tracing
 import zio.test.TestAspect.{sequential, success}
 import zio.test._
-import zio.{Clock, Random, Scope, ZIO, ZLayer}
+import zio.{Scope, URLayer, ZIO, ZLayer}
 
-object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
+object RoutesSpec extends BaseSpec with ClientOps {
   // needed for util->sl4j logging
   SLF4JBridgeHandler.install()
 
   val loggingLayer = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
-  private def routes(
+  private def callService(
       request: Request
   ) = {
     ZIO
@@ -42,7 +37,7 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
       zioOperation: ZIO[
         Shared
           with Tracing
-          with B3HTTPTracing
+          with B3HTTPResponseTracing
           with EventLoopGroup
           with ChannelFactory
           with TracingClient
@@ -57,13 +52,17 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
     // .provideSome[BaseSpec.Shared]
     // call or get some fun errors.
     def provideCommonForTest: ZIO[Shared with PersonRepo, Any, C] = {
+      // Can never find this thing as Tracing is a trait/object but finding the actual child implementation is
+      // difficult as for some reason the implementation in Tracing.scoped breaks Intellij's navigation
+      val tracingLive: URLayer[Tracer, Tracing] = zio.telemetry.opentelemetry.Tracing.live
+
       zioOperation.provideSome[Shared with PersonRepo](
         Routes.routesLayer,
         ChannelFactory.auto,
-        zio.telemetry.opentelemetry.Tracing.live,
+        tracingLive,
         TracingClient.tracingClientLayer,
-        NonExportingB3Tracer.live,
-        B3HTTPTracing.layer,
+        NonExportingTracer.live,
+        B3HTTPResponseTracing.layer,
         EventLoopGroup.auto(0),
         ExternalApiService.layer,
         ConfigReader.getRemoteServicesConfigLayer,
@@ -87,7 +86,7 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
 
         (for {
           _ <- reset
-          result <- routes(request)
+          result <- callService(request)
         } yield assertTrue(
           result.data == HttpData.fromString(deleteCount.toString)
         )).provideCommonForTest
@@ -103,14 +102,12 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
       ) {
         val expected = "empty calories are the best"
 
-        // EventLoopGroup with ChannelFactory with ServerAWireMock with AllTestBootstrap with Shared
         (for {
           _ <- reset
           params <- AllTestBootstrap.getParams
           _ <- ServerAWireMock.stubCall(expected)
           url = s"http://localhost:${params.serverAPort}/made-up-path"
           response <- Client.request(url = url)
-          // verify we have sent the header downstream
           dataAsString <- response.dataAsString
         } yield assertTrue(
           dataAsString == expected
@@ -142,7 +139,7 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
         val test = for {
           _ <- reset
           _ <- ServerAWireMock.stubCall("fruit fly")
-          response <- routes(request)
+          response <- callService(request)
           responseHeaders = response.headers.toList
           maybeNewSpanId = getHeaderValue(responseHeaders, B3.header.spanId)
           _ <- ServerAWireMock.verifyHeaders(List(traceIdHeader))
@@ -177,16 +174,17 @@ object RoutesSpec extends BaseSpec with ClientOps with B3TracingOps {
         val test = for {
           _ <- reset
           _ <- ServerAWireMock.stubCall("fruit fly")
-          response <- routes(request)
+          response <- callService(request)
           responseHeaders = response.headers.toList
           emptyTrace <- Tracing.getCurrentSpanContext
         } yield (
           assertTrue(
-            // We cannot tell what the traceId will be, it just needs to be there an not the default invalid empty one.
-            // Asserting something is not equal to something is always less than ideal due to the basic premise can be
-            // flawed so test may never fail.
+            // We cannot tell what the traceId will be, it just needs to be there and not the default invalid empty one.
+            // Asserting something is not equal to something is always less than ideal due to the fact the basic premise can be
+            // flawed so the test may never fail.
             // i.e may as well be
             // value != "pussycat"
+            // some time in the future
             getHeaderValue(responseHeaders, B3.header.traceId).isDefined,
             !getHeaderValue(responseHeaders, B3.header.traceId).contains(B3.emptyTraceId),
             getHeaderValue(responseHeaders, B3.header.spanId).isDefined,
