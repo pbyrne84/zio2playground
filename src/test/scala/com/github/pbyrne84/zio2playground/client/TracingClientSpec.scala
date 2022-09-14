@@ -3,7 +3,7 @@ package com.github.pbyrne84.zio2playground.client
 import com.github.pbyrne84.zio2playground.BaseSpec
 import com.github.pbyrne84.zio2playground.testbootstrap.extensions.ClientOps
 import com.github.pbyrne84.zio2playground.testbootstrap.wiremock.ServerAWireMock
-import com.github.pbyrne84.zio2playground.tracing.{B3HTTPTracing, TestZipkinTracer}
+import com.github.pbyrne84.zio2playground.tracing.{B3HTTPResponseTracing, TestZipkinTracer}
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.context.propagation.{TextMapGetter, TextMapPropagator}
 import io.opentelemetry.extension.trace.propagation.B3Propagator
@@ -61,7 +61,7 @@ object TracingClientSpec extends BaseSpec with ClientOps {
         zio.telemetry.opentelemetry.Tracing.live,
         TestZipkinTracer.live,
         TracingClient.tracingClientLayer,
-        B3HTTPTracing.layer
+        B3HTTPResponseTracing.layer
       )
     )
 }

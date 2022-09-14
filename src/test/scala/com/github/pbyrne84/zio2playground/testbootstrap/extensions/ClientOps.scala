@@ -5,6 +5,8 @@ import zio.ZIO
 
 import java.nio.charset.StandardCharsets
 
+object ClientOps extends ClientOps
+
 trait ClientOps {
 
   implicit class ResponseOps(response: Response) {

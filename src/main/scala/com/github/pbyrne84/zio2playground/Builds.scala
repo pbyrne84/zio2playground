@@ -3,8 +3,8 @@ package com.github.pbyrne84.zio2playground
 import com.github.pbyrne84.zio2playground.db.{PersonRepo, QuillDbConfig}
 import com.github.pbyrne84.zio2playground.routes.Routes
 import com.github.pbyrne84.zio2playground.service.PersonService
-import zio.Random.RandomScala
-import zio.{Clock, Scope, ZIO, ZLayer}
+
+import zio.{Scope, ZIO, ZLayer}
 
 //This stuff needs to be separate due to macros
 object Builds {
@@ -40,14 +40,10 @@ object Builds {
     lazy val routesBuild: ZIO[Any with Scope, Throwable, Routes] = ZLayer
       .make[Routes](
         Routes.routesLayer,
-        PersonRepoBuild.personRepoMake,
-        ZLayer.succeed(RandomScala(new util.Random())),
-        ZLayer.succeed(Clock.ClockJava(java.time.Clock.systemUTC()))
+        PersonRepoBuild.personRepoMake
       )
       .build
       .map(_.get[Routes])
   }
-
-  object DbConfigBuild {}
 
 }

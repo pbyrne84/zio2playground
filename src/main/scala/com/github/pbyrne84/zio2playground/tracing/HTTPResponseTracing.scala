@@ -7,25 +7,29 @@ import zhttp.http.Headers
 import zio.telemetry.opentelemetry.Tracing
 import zio.{URIO, ZIO, ZLayer}
 
-object HTTPTracing {}
+object HTTPResponseTracing {}
 
-trait HTTPTracing {
-  def appendHeaders(headers: Headers): ZIO[Tracing, Nothing, Headers]
+trait HTTPResponseTracing {
+  def appendHeadersToResponse(headers: Headers): ZIO[Tracing, Nothing, Headers]
 
   protected def currentContext: URIO[Tracing, Context] = Tracing.getCurrentContext
 }
 
-object B3HTTPTracing {
-  val layer: ZLayer[Any, Nothing, B3HTTPTracing] = ZLayer(ZIO.succeed(new B3HTTPTracing))
+object B3HTTPResponseTracing {
+  val layer: ZLayer[Any, Nothing, B3HTTPResponseTracing] = ZLayer(
+    ZIO.succeed(new B3HTTPResponseTracing)
+  )
 
-  def appendHeaders(currentHeaders: Headers): ZIO[Tracing with B3HTTPTracing, Nothing, Headers] = {
-    ZIO.serviceWithZIO[B3HTTPTracing](_.appendHeaders(currentHeaders))
+  def appendHeadersToResponse(
+      currentHeaders: Headers
+  ): ZIO[Tracing with B3HTTPResponseTracing, Nothing, Headers] = {
+    ZIO.serviceWithZIO[B3HTTPResponseTracing](_.appendHeadersToResponse(currentHeaders))
   }
 
 }
 
-class B3HTTPTracing extends HTTPTracing {
-  override def appendHeaders(headers: Headers): ZIO[Tracing, Nothing, Headers] = {
+class B3HTTPResponseTracing extends HTTPResponseTracing {
+  override def appendHeadersToResponse(headers: Headers): ZIO[Tracing, Nothing, Headers] = {
     currentContext.map(context => createHeadersFromContext(context, headers))
   }
 
