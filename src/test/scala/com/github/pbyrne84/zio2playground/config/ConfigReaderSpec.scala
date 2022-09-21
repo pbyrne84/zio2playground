@@ -13,11 +13,11 @@ object ConfigReaderSpec extends BaseSpec {
       suite("getDatabaseConfig") {
         test("reads the config successfully") {
           val expected = DbConfig(
-            datasourceClassName = "org.postgresql.ds.PGSimpleDataSource",
-            databaseName = "testdb",
-            password = "password",
-            jdbcUrl = "jdbc:postgresql://localhost/testdb?user=postgres",
-            user = "postgres"
+            datasourceClassName = "org.h2.jdbcx.JdbcDataSource",
+            password = "",
+            jdbcUrl =
+              "jdbc:h2:file:./testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH",
+            user = "sa"
           )
 
           for {

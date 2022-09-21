@@ -3,6 +3,8 @@ package com.github.pbyrne84.zio2playground.testbootstrap
 import com.github.pbyrne84.zio2playground.db.DbMigration
 import zio.{Ref, ZIO, ZLayer}
 
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+
 object RunOnceDbMigration {
 
   private val hasRun = false
@@ -20,7 +22,12 @@ class RunOnceDbMigration(hasRunRef: Ref.Synchronized[Boolean]) {
       if (!hasRun) {
         for {
           _ <- ZIO.logInfo("running db migration")
-          _ <- dbMigration.run
+          result <- dbMigration.run
+          _ <- ZIO.logInfo(
+            s"""successfully ran migrations ${result.map(_.success)} ${result.map(
+                _.migrations.asScala.map(_.filepath).mkString(", ")
+              )}"""
+          )
         } yield (true -> true)
       } else {
         for {

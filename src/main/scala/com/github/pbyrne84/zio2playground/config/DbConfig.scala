@@ -6,18 +6,16 @@ object DbConfig {
   import ConfigDescriptor._
 
   private[config] val dbConfigDescriptor: _root_.zio.config.ConfigDescriptor[DbConfig] =
-    nested("testPostgresDB")(
+    (nested("testDB")(
       string("dataSourceClassName") zip
         nested("dataSource")(
-          string("databaseName") zip
-            string("password") zip
+          string("password") zip
             string("user") zip
             string("url")
         )
-    ).map { case (datasourceClassName, (databaseName, password, user, jdbcUrl)) =>
+    )).map { case (datasourceClassName, (password, user, jdbcUrl)) =>
       DbConfig(
         datasourceClassName = datasourceClassName,
-        databaseName = databaseName,
         password = password,
         jdbcUrl = jdbcUrl,
         user = user
@@ -27,7 +25,6 @@ object DbConfig {
 
 case class DbConfig(
     datasourceClassName: String,
-    databaseName: String,
     user: String,
     password: String,
     jdbcUrl: String
