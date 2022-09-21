@@ -45,7 +45,7 @@ object TracingClientSpec extends BaseSpec with ClientOps {
           _ <- ServerAWireMock.verifyHeaders(
             List(
               B3.header.traceId -> currentSpan.getSpanContext.getTraceId,
-              B3.header.spanId -> currentSpan.getSpanContext.getSpanId,
+              B3.header.spanId -> "[0-9a-f]{16}", // don't know span id has we have child spans within
               B3.header.sampled -> "1"
             )
           )

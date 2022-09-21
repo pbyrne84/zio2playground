@@ -35,7 +35,7 @@ libraryDependencies ++= List(
   "io.getquill" %% "quill-jdbc-zio" % "4.3.0",
   "io.getquill" %% "quill-jasync-postgres" % "4.3.0",
   "io.opentracing" % "opentracing-mock" % "0.33.0" % Test,
-  "com.h2database" % "h2" % "2.1.214" % Test,
+  "com.h2database" % "h2" % "2.1.214",
   "io.d11" %% "zhttp-test" % "2.0.0-RC9" % Test,
   "dev.zio" %% "zio-test" % zioVersion % Test,
   "org.mockito" % "mockito-all" % "1.10.19" % Test,
@@ -44,5 +44,10 @@ libraryDependencies ++= List(
 )
 
 Test / parallelExecution := false
+
+Test / test := (Test / test)
+  .dependsOn(Compile / scalafmtCheck)
+  .dependsOn(Test / scalafmtCheck)
+  .value
 
 testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))

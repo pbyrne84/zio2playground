@@ -56,7 +56,7 @@ class ServerAWireMock(testWireMock: TestWireMock) extends StrictLogging {
     // wiremock is a builder builder builder mutation thingy
     val builder: RequestPatternBuilder = anyRequestedFor(urlMatching(".*"))
     val verification = headers.foldLeft(builder) { case (request, (name, value)) =>
-      request.withHeader(name, equalTo(value))
+      request.withHeader(name, matching(value))
     }
 
     ZIO.attempt(testWireMock.wireMock.verify(verification))
