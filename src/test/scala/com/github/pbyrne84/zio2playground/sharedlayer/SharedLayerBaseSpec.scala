@@ -75,7 +75,7 @@ object SharedLayerBaseSpec {}
 
 abstract class SharedLayerBaseSpec extends ZIOSpec[ExpensiveService] {
 
-  override def bootstrap: ZLayer[Scope, Any, ExpensiveService] = ExpensiveService.layer
+  override def bootstrap: ZLayer[Any, Nothing, ExpensiveService] = ExpensiveService.layer
 }
 
 object TestA extends SharedLayerBaseSpec {
