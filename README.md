@@ -3,12 +3,10 @@
 A repo that covers 
 
 1. Service layering in tests including shared layering. As mentioned there are some gotchas.
-2. How to set up an external tool in intellij, this enables run a test without a plugin without 
-   having to focus off a coding tab. 
-3. Tracing through the application using OpenTelemetry, this enables Zipkin etc. This includes setting 
+2. Tracing through the application using OpenTelemetry, this enables Zipkin etc. This includes setting 
    current context from incoming headers. We want to keep the trace across system boundaries. 
    Not having this sort of stuff can make a fun day a much less than fun day.
-4. How we log the trace in the logging, so we can get some kibana or similar goodness. This implementation uses logback 
+3. How we log the trace in the logging, so we can get some kibana or similar goodness. This implementation uses logback 
    as not everything is likely to be pure ZIO.log in an application. There is an example of monkeying around
    with the MDC in **LoggingSL4JExample**. This handles java util and direct SL4J logging which probably simulates a lot 
    of production environments. For example, I don't think a functionally pure version of PAC4J is on anyone's todo list. 
@@ -22,119 +20,43 @@ A repo that covers
 
    **B3TracingOps.serverSpan** creates a span and add it to the logging context.
    
-5. ZIO.log does add to the MDC but only for that call. The logback.xml config adds all MDC
+4. ZIO.log does add to the MDC but only for that call. The logback.xml config adds all MDC
    to the log hence number **LoggingSL4JExample** is doing something similar for the java logging calls.
 
 
 ## Testing
-
-Currently, tests kind of work in Intellij. They run as a main class which means things like shared 
-services across tests behave very weird. Having the ZIO plugin would fix that but at this point in time
-it is not ZIO2 compatible.
+Currently, tests kind of work in Intellij. The shared layering works but the rendering of the test results only
+works if all the tests are run. Also running multiple tests across files is ignored.
 
 The instructions for sharing services across tests can be found in the following video.
 
 **Zymposium - Sharing Expensive Services Across Specs**
 https://www.youtube.com/watch?v=gzHStYNa6Og&t=878s
 
-What happens when run as a main class is the shared service instantiates 3 times. This is easily 
-verifiable in the **SharedLayerBaseSpec** where this is all detailed. Without a specific test 
-runner intellij is doing the equivalent of :- 
+Instead of using the **zio.test.ZIOSpecDefault** base class create a custom one with a type that houses the common 
+signature for what will be shared.
 
-```shell
-sbt "Test/runMain com.github.pbyrne84.zio2playground.sharedlayer.TestA"
+Taken from <https://github.com/pbyrne84/zio2playground/blob/main/src/test/scala/com/github/pbyrne84/zio2playground/BaseSpec.scala>
+
+```scala
+type Shared = AllTestBootstrap
+  with ServerAWireMock
+  with InitialisedParams
+  with EnvironmentParamSetup
 ```
 
-which outputs 
+And then in the use that in the **ZIOSpec[R : EnvironmentTag]** signature
 
-```shell
-{
-  "@timestamp": "2022-09-13T14:56:23.54+01:00",
-  "@version": "1",
-  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expens  iveService Thread[ZScheduler-Worker-9,5,main]",
-  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
-  "thread_name": "ZScheduler-Worker-9",
-  "level": "INFO",
-  "level_value": 20000
-}{
-  "@timestamp": "2022-09-13T14:56:23.662+01:00",
-  "@version": "1",
-  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expen  siveService Thread[ZScheduler-Worker-10,5,main]",
-  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
-  "thread_name": "ZScheduler-Worker-10",
-  "level": "INFO",
-  "level_value": 20000
-}{
-  "@timestamp": "2022-09-13T14:56:23.879+01:00",
-  "@version": "1",
-  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.Expen  siveService Thread[ZScheduler-Worker-0,5,main]",
-  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
-  "thread_name": "ZScheduler-Worker-0",
-  "level": "INFO",
-  "level_value": 20000
-}
+e.g.
+```scala
+abstract class BaseSpec extends ZIOSpec[BaseSpec.Shared]
 ```
 
-while running 
+The abstract **bootstrap** method will then have to fit that signature.
 
-```shell
-sbt "Test/testOnly com.github.pbyrne84.zio2playground.sharedlayer.TestA"
+```scala
+val bootstrap = BaseSpec.layerWithWireMock
 ```
-
-outputs just one instance
-
-```shell
-{
-  "@timestamp": "2022-09-13T14:57:44.966+01:00",
-  "@version": "1",
-  "message": "created ExpensiveService class com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveServ  ice Thread[ZScheduler-Worker-5,5,main]",
-  "logger_name": "com.github.pbyrne84.zio2playground.sharedlayer.ExpensiveService",
-  "thread_name": "ZScheduler-Worker-5",
-  "level": "INFO",
-  "level_value": 20000
-}
-```
-
-meaning the expensive service is only created once.
-
-This can be a bit of a gotcha as it can be a bit confusing. It is nice to be able to run tests in isolation as it 
-enables a debugger to be easily used as inheriting tests can be a variable affair. Worth keeping an eye on the 
-GitHub projects
-
-https://github.com/zio/zio-intellij/
-and
-https://github.com/zio/zio-test-intellij
-
-
-### Using an intellij external tool to run tests
-https://www.jetbrains.com/help/idea/settings-tools-external-tools.html
-
-External tools allow you to set up custom operations to run from Intellij. They have a set of macros that can be 
-passed to the external tool such as the line number $LineNumber$ or the file path relative to source path **$FilePathRelativeToSourcepath$**.
-$FilePathRelativeToSourcepath$ is useful as we can calculate the test class to run from that and call sbt run that tests.
-
-![external_tool.png](pythonTestRunner/external_tool.png)
-
-#### test_runner.py
-This takes the argument passed from the external tool and if the file ends in Test or Spec runs that test. Else it runs the 
-previous test. This is so you can write the tests first (like children who will get more than coal at Christmas), run the 
-tests proving they fail, then switch to the implementation while running the tests without having to go back to the test
-or command line. Keeping the flow. 
-
-(CMD|CTRL)+shift+a opens the run action allowing you to type the name of the external tool and run it that way,
-it remembers the last thing you typed, you can just open it again and press enter to retry. This is not as elegant 
-as the usual shift+f10 or CMD+R which runs the last run action but still it is better than flicking around in 
-panels or tabs needlessly. 
-
-This is just an example, it is tied to being in a subfolder in this project purely because I needed to set up a python
-sdk in a scala project as a submodule.
-
-If you were really adventurous you could get the line number and search backwards for the test name and then only run 
-that test case.
-
-#### problems
-This does not solve the problem of easily debugging though that could probably be done.
-
 
 ## Logging and tracing
 We need a **spanFrom**  operation to initialise tracing with a starting value such as an incoming headers or to 
