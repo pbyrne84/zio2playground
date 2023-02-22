@@ -22,7 +22,7 @@ object ZIOCustomFibreSpec extends BaseSpec {
             _ = println("boop")
             _ <- ZIO.attempt(Thread.sleep(1000))
             _ <- ZIO.succeed(println("ssss"))
-            _ <- backoundFork.interruptFork
+            // _ <- backoundFork.interruptFork
           } yield assertTrue(true)
         }
       )
