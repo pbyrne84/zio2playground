@@ -40,7 +40,9 @@ libraryDependencies ++= List(
   "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
   "com.github.tomakehurst" % "wiremock" % "2.27.2" % Test,
   "org.typelevel" %% "cats-effect" % "3.4.8" % Test,
-  "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test
+  "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
+  "dev.zio" %% "zio-http" % "0.0.4" % Test,
+  "com.softwaremill.sttp.client3" %% "zio" % "3.8.11" % Test
 )
 
 Test / parallelExecution := false
