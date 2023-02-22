@@ -38,7 +38,9 @@ libraryDependencies ++= List(
   "dev.zio" %% "zio-test" % zioVersion % Test,
   "org.mockito" % "mockito-all" % "1.10.19" % Test,
   "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
-  "com.github.tomakehurst" % "wiremock" % "2.27.2" % Test
+  "com.github.tomakehurst" % "wiremock" % "2.27.2" % Test,
+  "org.typelevel" %% "cats-effect" % "3.4.8" % Test,
+  "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test
 )
 
 Test / parallelExecution := false
