@@ -11,7 +11,6 @@ libraryDependencies ++= List(
   "dev.zio" %% "zio" % zioVersion,
   "io.d11" %% "zhttp" % "2.0.0-RC10",
   "org.scalaz" %% "scalaz-core" % "7.3.7",
-  "ch.qos.logback" % "logback-classic" % "1.4.5",
   "org.slf4j" % "jul-to-slf4j" % "2.0.5",
   "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
   "dev.zio" %% "zio-logging-slf4j-bridge" % zioLoggingVersion,
