@@ -32,9 +32,9 @@ object ZioTestHttpClient {
 object ZIOBackgroundMockHttpServiceSpec extends BaseSpec {
   override def spec: Spec[Shared with TestEnvironment with Scope, Any] = {
     suite(getClass.getSimpleName)(
-      suite("")(
-        test("") { // all the basicRequest/asStringAlways stuff etc.
-          val operation = new CustomOperation()
+      suite("creating a background http service should")(
+        test("not interfere with the code under test") { // all the basicRequest/asStringAlways stuff etc.
+          val operation = new IOCustomOperation()
           for {
             backoundFork <- operation.run
             _ <- operation.createStartupWaitingWebService
@@ -54,19 +54,19 @@ object ZIOBackgroundMockHttpServiceSpec extends BaseSpec {
   }
 }
 
-object CustomOperation {
+object ZioCustomOperation {
   val customRuntime: Runtime[Any] =
     Runtime(ZEnvironment.empty, FiberRefs.empty, RuntimeFlags.default)
 
   def main(args: Array[String]): Unit = {
-    new CustomOperation().run
+    new IOCustomOperation().run
   }
 }
 
 //Just create something that will run in the background that cannot inhibit test
-class CustomOperation {
+class ZioCustomOperation {
 
-  private val runtime = CustomOperation.customRuntime
+  private val runtime = IOCustomOperation.customRuntime
 
   def run = {
     val call = (for {

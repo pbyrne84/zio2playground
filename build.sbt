@@ -41,6 +41,7 @@ libraryDependencies ++= List(
   "com.github.tomakehurst" % "wiremock" % "2.27.2" % Test,
   "org.typelevel" %% "cats-effect" % "3.4.8" % Test,
   "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
+  "org.http4s" %% "http4s-server" % "0.23.18" % Test,
   "dev.zio" %% "zio-http" % "0.0.4" % Test,
   "com.softwaremill.sttp.client3" %% "zio" % "3.8.11" % Test
 )
