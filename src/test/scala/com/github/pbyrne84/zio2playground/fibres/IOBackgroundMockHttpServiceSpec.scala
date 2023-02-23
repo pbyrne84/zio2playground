@@ -1,11 +1,14 @@
 package com.github.pbyrne84.zio2playground.fibres
 
-import cats.effect.IO
+import cats.effect.{IO, Sync}
 import cats.effect.testing.scalatest.AsyncIOSpec
+import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AsyncWordSpec
 import zio.{FiberRefs, Runtime, RuntimeFlags, ZEnvironment, ZIO}
+
+import scala.concurrent.ExecutionContext
 
 // Experimenting to see if I can create pluggable backends for
 // https://github.com/pbyrne84/scalahttpmock
@@ -101,5 +104,31 @@ class IOCustomOperation {
 
     Server.serve(app).provide(Server.default).fork
 
+    // There are multiple versions of Ok etc so keeping imports here makes things
+    // easier for my brain
+    import cats.effect._, org.http4s._, org.http4s.dsl.io._
+    val helloWorldService = HttpRoutes.of[IO] { case GET -> Root / "hello" / name =>
+      Ok(s"Hello, $name.")
+    }
+
+  }
+  import cats.effect._
+  import cats.syntax.all._
+  import cats.implicits._
+
+  private def createBlazeServer[F[_] : Sync : ContextShift](
+      executionContext: ExecutionContext,
+      routes: HttpRoutes[IO]
+  ) = {
+//    import zio.interop.catz._
+//    import zio.interop.catz.implicits.rts
+
+    BlazeServerBuilder[IO]
+      .withExecutionContext(executionContext)
+      .bindHttp(8080, "localhost")
+      .withHttpWebSocketApp(_ => routes.orNotFound)
+      .serve
+      .compile
+      .drain.fork
   }
 }
