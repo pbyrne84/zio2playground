@@ -2,23 +2,9 @@ package com.github.pbyrne84.zio2playground.fibres
 
 import com.github.pbyrne84.zio2playground.BaseSpec
 import com.github.pbyrne84.zio2playground.BaseSpec.Shared
-import sttp.client3.{asStringAlways, basicRequest}
 import sttp.client3.httpclient.zio.HttpClientZioBackend
-import zio.{
-  Clock,
-  Fiber,
-  FiberRefs,
-  Runtime,
-  RuntimeFlags,
-  Scope,
-  Unsafe,
-  ZEnvironment,
-  ZIO,
-  ZLayer
-}
 import zio.test._
-
-import java.time.Duration
+import zio.{FiberRefs, Runtime, RuntimeFlags, Scope, ZEnvironment, ZIO}
 
 object ZioTestHttpClient {
 
@@ -37,14 +23,17 @@ object ZioTestHttpClient {
   }
 }
 
-// Experimenting as I want to run something in parallel as a test utility with its own isolated fibre
-// that can be shutdown separately
-object ZIOCustomFibreSpec extends BaseSpec {
+// Experimenting to see if I can create pluggable backends for
+// https://github.com/pbyrne84/scalahttpmock
+// Hard coding reliance on either IO or ZIO can leave projects
+// with dependency conflicts on their major dependencies.
+//
+//
+object ZIOBackgroundMockHttpServiceSpec extends BaseSpec {
   override def spec: Spec[Shared with TestEnvironment with Scope, Any] = {
     suite(getClass.getSimpleName)(
       suite("")(
-        test("") {
-          import sttp.client3._ // all the basicRequest/asStringAlways stuff etc.
+        test("") { // all the basicRequest/asStringAlways stuff etc.
           val operation = new CustomOperation()
           for {
             backoundFork <- operation.run
