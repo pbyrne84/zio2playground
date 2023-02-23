@@ -8,6 +8,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
 import zio.{FiberRefs, Runtime, RuntimeFlags, ZEnvironment, ZIO}
 
+import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 
 // Experimenting to see if I can create pluggable backends for
@@ -84,14 +85,13 @@ class IOCustomOperation {
 
     for {
       _ <- createBackgroundWebService
-      a <- (for {
-        _ <- ZioTestHttpClient
-          .call("http://localhost:8080/text")
-        _ = Thread.sleep(
-          100
-        ) // I actually want a real clock for scheduling etc but in a test there is a test clock
-      } yield ()).retryN(1000)
-    } yield a
+//      a <- (for {
+//        _ <- ZioTestHttpClient
+//          .call("http://localhost:8080/text")
+//        _ = Thread.sleep(
+//          100
+//        ) // I actually want a real clock for scheduling etc but in a test there is a test clock
+    } yield ()
   }
 
   private def createBackgroundWebService = {
@@ -110,6 +110,11 @@ class IOCustomOperation {
     val helloWorldService = HttpRoutes.of[IO] { case GET -> Root / "hello" / name =>
       Ok(s"Hello, $name.")
     }
+
+    createBlazeServer(
+      ExecutionContext.fromExecutorService(Executors.newCachedThreadPool()),
+      helloWorldService
+    )
 
   }
   import cats.effect._
