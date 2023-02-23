@@ -116,19 +116,21 @@ class IOCustomOperation {
   import cats.syntax.all._
   import cats.implicits._
 
-  private def createBlazeServer[F[_] : Sync : ContextShift](
+  private def createBlazeServer(
       executionContext: ExecutionContext,
       routes: HttpRoutes[IO]
-  ) = {
+  ): IO[FiberIO[Nothing]] = {
 //    import zio.interop.catz._
 //    import zio.interop.catz.implicits.rts
-
+    //  import scala.concurrent.duration._
     BlazeServerBuilder[IO]
       .withExecutionContext(executionContext)
       .bindHttp(8080, "localhost")
       .withHttpWebSocketApp(_ => routes.orNotFound)
       .serve
       .compile
-      .drain.fork
+      .drain
+      .foreverM
+      .start
   }
 }
