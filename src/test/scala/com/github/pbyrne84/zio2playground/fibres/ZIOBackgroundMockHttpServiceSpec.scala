@@ -34,7 +34,7 @@ object ZIOBackgroundMockHttpServiceSpec extends BaseSpec {
     suite(getClass.getSimpleName)(
       suite("creating a background http service should")(
         test("not interfere with the code under test") { // all the basicRequest/asStringAlways stuff etc.
-          val operation = new IOCustomOperation()
+          val operation = new ZioCustomOperation()
           for {
             backoundFork <- operation.run
             _ <- operation.createStartupWaitingWebService
