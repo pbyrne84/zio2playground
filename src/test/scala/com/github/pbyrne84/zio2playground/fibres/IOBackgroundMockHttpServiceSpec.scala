@@ -50,6 +50,9 @@ class IOBackgroundMockHttpServiceSpec extends AsyncFreeSpec with AsyncIOSpec wit
       for {
         backoundFork <- ioOperation.run
         _ <- ioOperation.createStartupWaitingWebService
+        response <- IoTestHttpClient.call("http://localhost:8080/text")
+        _ = println(response)
+        _ = println("boop")
         a = 1
       } yield (a shouldBe 1)
     }
@@ -107,7 +110,7 @@ class IOCustomOperation {
     createBlazeServer(
       ExecutionContext.fromExecutorService(Executors.newCachedThreadPool()),
       helloWorldService
-    )
+    ).start
 
   }
   import cats.effect._
