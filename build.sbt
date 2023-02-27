@@ -14,6 +14,7 @@ libraryDependencies ++= List(
   "org.slf4j" % "jul-to-slf4j" % "2.0.5",
   "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
   "dev.zio" %% "zio-logging-slf4j-bridge" % zioLoggingVersion,
+  "dev.zio" %% "zio-interop-cats" % "23.0.0.2",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "io.opentracing" % "opentracing-util" % "0.33.0",
   "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % openTelemetryVersion,
@@ -44,7 +45,8 @@ libraryDependencies ++= List(
   "org.http4s" %% "http4s-dsl" % "0.23.13" % Test,
   "org.http4s" %% "http4s-server" % "0.23.18" % Test,
   "dev.zio" %% "zio-http" % "0.0.4" % Test,
-  "com.softwaremill.sttp.client3" %% "zio" % "3.8.11" % Test
+  "com.softwaremill.sttp.client3" %% "zio" % "3.8.11" % Test,
+  "com.softwaremill.sttp.client3" %% "armeria-backend-cats" % "3.8.11" % Test
 )
 
 Test / parallelExecution := false

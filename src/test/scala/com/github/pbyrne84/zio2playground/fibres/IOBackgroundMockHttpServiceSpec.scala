@@ -6,10 +6,31 @@ import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.must.Matchers
+import sttp.client3.Response
+import sttp.client3.armeria.cats.ArmeriaCatsBackend
+import sttp.client3.httpclient.cats.HttpClientCatsBackend
+import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.{FiberRefs, Runtime, RuntimeFlags, ZEnvironment, ZIO}
 
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
+
+object IoTestHttpClient {
+
+  // too many Responses in one project
+  def call(urlText: String): IO[Response[String]] = {
+    import sttp.client3._ // all the basicRequest/asStringAlways stuff etc.
+    val catsBackend = HttpClientCatsBackend.resource[IO]()
+    catsBackend.use { backend =>
+      val url = uri"$urlText"
+      val request = basicRequest
+        .response(asStringAlways)
+        .get(url)
+      backend
+        .send(request)
+    }
+  }
+}
 
 // Experimenting to see if I can create pluggable backends for
 // https://github.com/pbyrne84/scalahttpmock
@@ -34,28 +55,6 @@ class IOBackgroundMockHttpServiceSpec extends AsyncFreeSpec with AsyncIOSpec wit
     }
   }
 
-//   def spec: Spec[Shared with TestEnvironment with Scope, Any] = {
-//    suite(getClass.getSimpleName)(
-//      suite("")(
-//        test("") { // all the basicRequest/asStringAlways stuff etc.
-//          val operation = new IOCustomOperation()
-//          for {
-//            backoundFork <- operation.run
-//            _ <- operation.createStartupWaitingWebService
-//            //  _ = Thread.sleep(1000)
-//            meow <- ZIO
-//              .succeed(println("should shut down"))
-//            response <- ZioTestHttpClient.call("http://localhost:8080/text")
-//            _ = println(response)
-//            _ = println("boop")
-//            _ <- ZIO.attempt(Thread.sleep(1000))
-//            _ <- ZIO.succeed(println("ssss"))
-//            // _ <- backoundFork.interruptFork
-//          } yield assertTrue(true)
-//        }
-//      )
-//    )
-//  }
 }
 
 object IOCustomOperation {}
@@ -86,16 +85,15 @@ class IOCustomOperation {
   }
 
   def createStartupWaitingWebService: IO[Unit] = {
-
     for {
       _ <- createBackgroundWebService
-//      a <- (for {
-//        _ <- ZioTestHttpClient
-//          .call("http://localhost:8080/text")
-//        _ = Thread.sleep(
-//          100
-//        ) // I actually want a real clock for scheduling etc but in a test there is a test clock
+      a <- (for {
+        _ <- IoTestHttpClient
+          .call("http://localhost:8080/text")
+        _ = Thread.sleep(100)
+      } yield ()) // I actually want a real clock for scheduling etc but in a test there is a test clock
     } yield ()
+
   }
 
   private def createBackgroundWebService = {
