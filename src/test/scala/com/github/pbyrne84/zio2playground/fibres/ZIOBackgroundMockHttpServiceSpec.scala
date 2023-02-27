@@ -66,8 +66,6 @@ object ZioCustomOperation {
 //Just create something that will run in the background that cannot inhibit test
 class ZioCustomOperation {
 
-  private val runtime = IOCustomOperation.customRuntime
-
   def run = {
     val call = (for {
       counters <- ZIO.succeed((0 to 3000).toList)

@@ -24,7 +24,13 @@ class IOBackgroundMockHttpServiceSpec extends AsyncFreeSpec with AsyncIOSpec wit
 
   "aa" - {
     "aaa" in {
-      IO(1).asserting(_ shouldBe 1)
+      val ioOperation = new IOCustomOperation()
+
+      for {
+        backoundFork <- ioOperation.run
+        _ <- ioOperation.createStartupWaitingWebService
+        a = 1
+      } yield (a shouldBe 1)
     }
   }
 
@@ -52,36 +58,34 @@ class IOBackgroundMockHttpServiceSpec extends AsyncFreeSpec with AsyncIOSpec wit
 //  }
 }
 
-object IOCustomOperation {
-  val customRuntime: Runtime[Any] =
-    Runtime(ZEnvironment.empty, FiberRefs.empty, RuntimeFlags.default)
-
-}
+object IOCustomOperation {}
 
 //Just create something that will run in the background that cannot inhibit test
 class IOCustomOperation {
-
-  private val runtime = IOCustomOperation.customRuntime
-
+  import cats.effect._
+  import cats.syntax.all._
   def run = {
-    val call = (for {
-      counters <- ZIO.succeed((0 to 3000).toList)
-      x <- ZIO.foreach(counters) { counter =>
-        ZIO
-          .blocking { // blocking as there is a Thread.sleep within.
-            ZIO.succeed {
-              Thread.sleep(100)
-              println(counter)
-              counter
-            }
-          }
-      }
-    } yield ()).fork
+    import cats.instances.list._
+    import cats.syntax.foldable._
 
-    call
+    def doSomething(counter: Int) = {
+      IO
+        .blocking { // blocking as there is a Thread.sleep within.
+          Thread.sleep(100)
+          println(counter)
+          counter
+        }
+    }
+
+    val call = for {
+      counters <- IO((0 to 3000).toList)
+      _ <- counters.traverse_ { doSomething }
+    } yield ()
+
+    call.start
   }
 
-  def createStartupWaitingWebService = {
+  def createStartupWaitingWebService: IO[Unit] = {
 
     for {
       _ <- createBackgroundWebService
@@ -95,15 +99,6 @@ class IOCustomOperation {
   }
 
   private def createBackgroundWebService = {
-    import zio.http._
-    import zio.http.model.Method
-
-    val app: HttpApp[Any, Nothing] = Http.collect[Request] { case Method.GET -> !! / "text" =>
-      Response.text("Hello World!")
-    }
-
-    Server.serve(app).provide(Server.default).fork
-
     // There are multiple versions of Ok etc so keeping imports here makes things
     // easier for my brain
     import cats.effect._, org.http4s._, org.http4s.dsl.io._
