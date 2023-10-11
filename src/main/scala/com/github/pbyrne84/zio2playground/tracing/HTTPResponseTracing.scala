@@ -3,7 +3,7 @@ package com.github.pbyrne84.zio2playground.tracing
 import com.github.pbyrne84.zio2playground.client.B3
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.context.{Context, ContextKey}
-import zhttp.http.Headers
+import zio.http.{Header, Headers}
 import zio.telemetry.opentelemetry.Tracing
 import zio.{URIO, ZIO, ZLayer}
 
@@ -45,9 +45,9 @@ class B3HTTPResponseTracing extends HTTPResponseTracing {
 
     headers.combine(
       Headers(
-        B3.header.traceId -> spanContext.getTraceId,
-        B3.header.spanId -> spanContext.getSpanId,
-        B3.header.sampled -> sampled
+        Header.Custom(B3.header.traceId, spanContext.getTraceId),
+        Header.Custom(B3.header.spanId, spanContext.getSpanId),
+        Header.Custom(B3.header.sampled, sampled)
       )
     )
   }

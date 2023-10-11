@@ -2,14 +2,14 @@ package com.github.pbyrne84.zio2playground.tracing
 
 import com.typesafe.scalalogging.StrictLogging
 import io.opentelemetry.context.propagation.TextMapGetter
-import zhttp.http.Header
+import zio.http._
 
 import java.util
 import scala.jdk.CollectionConverters.SeqHasAsJava
 class HeaderTextMapGetter extends TextMapGetter[List[Header]] with StrictLogging {
   override def keys(carrier: List[Header]): util.List[String] = {
     logger.info(s"getting keys $carrier for tracing")
-    carrier.map(_._1.toString).asJava
+    carrier.map(_.headerName).asJava
   }
 
   // This will be called B3PropagatorExtractorMultipleHeaders using the values passed in
@@ -24,6 +24,6 @@ class HeaderTextMapGetter extends TextMapGetter[List[Header]] with StrictLogging
   // Header matching should always be case insensitive as well
   override def get(carrier: List[Header], key: String): String = {
     logger.info(s"get key from $carrier -  $key")
-    carrier.find(_._1.toString.toLowerCase == key.toLowerCase).map(_._2.toString).orNull
+    carrier.find(_.headerName.toLowerCase == key.toLowerCase).map(_.renderedValue).orNull
   }
 }

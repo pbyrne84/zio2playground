@@ -3,11 +3,9 @@ package com.github.pbyrne84.zio2playground.client
 import com.github.pbyrne84.zio2playground.logging.ExampleLogAnnotations
 import com.github.pbyrne84.zio2playground.tracing.{B3Tracing, HTTPResponseTracing}
 import io.opentelemetry.api.trace.{SpanId, TraceId}
-import zhttp.http.{Headers, HttpData, Method, Response}
-import zhttp.service.client.ClientSSLHandler.ClientSSLOptions
-import zhttp.service.{ChannelFactory, Client, EventLoopGroup}
+import zio.http._
 import zio.telemetry.opentelemetry.Tracing
-import zio.{Trace, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
 object B3 {
 
@@ -27,14 +25,9 @@ object TracingClient {
       url: String,
       method: Method = Method.GET,
       headers: Headers = Headers.empty,
-      content: HttpData = HttpData.empty,
-      ssl: ClientSSLOptions = ClientSSLOptions.DefaultSSL
-  ): ZIO[
-    EventLoopGroup with ChannelFactory with Tracing with TracingClient,
-    Throwable,
-    Response
-  ] = {
-    ZIO.service[TracingClient].flatMap(_.request(url, method, headers, content, ssl))
+      content: Body = Body.empty
+  ): ZIO[Any with Tracing with Client with TracingClient, Throwable, Response] = {
+    ZIO.service[TracingClient].flatMap(_.request(url, method, headers, content))
   }
 
   val tracingClientLayer: ZLayer[HTTPResponseTracing, Nothing, TracingClient] = ZLayer {
@@ -50,9 +43,8 @@ class TracingClient(HTTPTracing: HTTPResponseTracing) {
       url: String,
       method: Method = Method.GET,
       headers: Headers = Headers.empty,
-      content: HttpData = HttpData.empty,
-      ssl: ClientSSLOptions = ClientSSLOptions.DefaultSSL
-  ): ZIO[EventLoopGroup with ChannelFactory with Tracing, Throwable, Response] =
+      content: Body = Body.empty
+  ): ZIO[Any with Tracing with Client, Throwable, Response] =
     B3Tracing.serverSpan(s"${method.toString.toLowerCase}-client-call") {
       for {
         _ <- ZIO
@@ -62,8 +54,7 @@ class TracingClient(HTTPTracing: HTTPResponseTracing) {
           url = url,
           method = method,
           headers = appendedHeaders,
-          content = content,
-          ssl = ssl
+          content = content
         )
         _ <- B3Tracing.serverSpan("client-call-status") {
           // we can now look for things that are not okay using span_name = client-call-status and message != OK as a search value

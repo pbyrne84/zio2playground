@@ -3,9 +3,10 @@ package com.github.pbyrne84.zio2playground.tracing
 import com.github.pbyrne84.zio2playground.BaseSpec
 import com.github.pbyrne84.zio2playground.client.B3
 import io.opentelemetry.api.trace.{SpanKind, Tracer}
-import zio.{Scope, ZIO}
+import zio.http.Header
 import zio.telemetry.opentelemetry.Tracing
 import zio.test._
+import zio.{Scope, ZIO}
 object ManualTraceInitialisationSpec extends ZIOSpecDefault {
 
   implicit class B3Ops[A, B, C](operation: ZIO[A, B, C]) {
@@ -20,9 +21,9 @@ object ManualTraceInitialisationSpec extends ZIOSpecDefault {
         .spanFrom(
           propagator = B3Tracing.b3Propagator,
           carrier = List(
-            B3.header.traceId -> tracedId,
-            B3.header.spanId -> spanId,
-            B3.header.sampled -> "1"
+            Header.Custom(B3.header.traceId, tracedId),
+            Header.Custom(B3.header.spanId, spanId),
+            Header.Custom(B3.header.sampled, "1")
           ),
           getter = B3Tracing.headerTextMapGetter,
           spanName = "span-name",
