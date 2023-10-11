@@ -12,8 +12,7 @@ import com.github.pbyrne84.zio2playground.tracing.{B3HTTPResponseTracing, NonExp
 import io.opentelemetry.api.trace.Tracer
 import org.mockito.Mockito
 import org.slf4j.bridge.SLF4JBridgeHandler
-import zhttp.http._
-import zhttp.service.{ChannelFactory, Client, EventLoopGroup}
+import zio.http._
 import zio.logging.backend.SLF4J
 import zio.telemetry.opentelemetry.Tracing
 import zio.test.TestAspect.{sequential, success}
@@ -24,13 +23,13 @@ object RoutesSpec extends BaseSpec with ClientOps {
   // needed for util->sl4j logging
   SLF4JBridgeHandler.install()
 
-  val loggingLayer = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+  private val loggingLayer = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   private def callService(
       request: Request
   ) = {
     ZIO
-      .serviceWithZIO[Routes](_.routes.apply(request))
+      .serviceWithZIO[Routes](_.routes.runZIO(request))
   }
 
   implicit class TestOps[B, C](
@@ -38,11 +37,10 @@ object RoutesSpec extends BaseSpec with ClientOps {
         Shared
           with Tracing
           with B3HTTPResponseTracing
-          with EventLoopGroup
-          with ChannelFactory
           with TracingClient
           with ExternalApiService
           with Scope
+          with Client
           with Routes,
         B,
         C
@@ -58,15 +56,14 @@ object RoutesSpec extends BaseSpec with ClientOps {
 
       zioOperation.provideSome[Shared with PersonRepo](
         Routes.routesLayer,
-        ChannelFactory.auto,
         tracingLive,
         TracingClient.tracingClientLayer,
         NonExportingTracer.live,
         B3HTTPResponseTracing.layer,
-        EventLoopGroup.auto(0),
         ExternalApiService.layer,
         ConfigReader.getRemoteServicesConfigLayer,
         Scope.default,
+        ZClient.default,
         loggingLayer
       )
     }
@@ -75,7 +72,7 @@ object RoutesSpec extends BaseSpec with ClientOps {
   override def spec = suite("routes")(
     suite("delete3")(
       test("should use mock for repo") {
-        val request = Request(url = URL.empty.setPath("/delete3"))
+        val request = Request.get(url = URL.empty.copy(path = Path.decode("/delete3")))
         val personRepoMock = Mockito.mock(classOf[PersonRepo])
         val personLayer = ZLayer.succeed(personRepoMock)
 
@@ -87,8 +84,9 @@ object RoutesSpec extends BaseSpec with ClientOps {
         (for {
           _ <- reset
           result <- callService(request)
+          content <- result.body.asString
         } yield assertTrue(
-          result.data == HttpData.fromString(deleteCount.toString)
+          content == deleteCount.toString
         )).provideCommonForTest
           .provideSome[BaseSpec.Shared](
             personLayer
@@ -111,7 +109,7 @@ object RoutesSpec extends BaseSpec with ClientOps {
           dataAsString <- response.dataAsString
         } yield assertTrue(
           dataAsString == expected
-        )).provideSome[BaseSpec.Shared](EventLoopGroup.auto(), ChannelFactory.auto)
+        ))
       }
     ),
     suite("calling proxy route")(
@@ -125,16 +123,20 @@ object RoutesSpec extends BaseSpec with ClientOps {
         // io.opentelemetry.api.trace.SpanId.fromLong(666))
         val spanId = "000000000000029a"
 
-        val traceIdHeader = B3.header.traceId -> traceId
+        val traceIdHeader = Header.Custom(B3.header.traceId, traceId)
         val headersWithTrace = Headers(
           traceIdHeader,
-          B3.header.spanId -> spanId,
-          B3.header.sampled -> "1"
+          Header.Custom(B3.header.spanId, spanId),
+          Header.Custom(B3.header.sampled, "1")
         )
 
         val id = 123
         val request =
-          Request(url = URL.empty.setPath(path = s"/proxy/$id"), headers = headersWithTrace)
+          Request
+            .get(url = URL.empty.copy(path = Path.decode(s"/proxy/$id")))
+            .copy(
+              headers = headersWithTrace
+            )
 
         val test = for {
           _ <- reset
@@ -169,7 +171,7 @@ object RoutesSpec extends BaseSpec with ClientOps {
         val personRepoMock = Mockito.mock(classOf[PersonRepo])
         val personLayer = ZLayer.succeed(personRepoMock)
         val id = 433
-        val request = Request(url = URL.empty.setPath(path = s"/proxy/$id"))
+        val request = Request.get(url = URL.empty.copy(path = Path.decode(s"/proxy/$id")))
 
         val test = for {
           _ <- reset
@@ -202,8 +204,8 @@ object RoutesSpec extends BaseSpec with ClientOps {
           )
       }
     )
-  ) @@ sequential @@ success
+  ).provideSome[BaseSpec.Shared](ZClient.default) @@ sequential @@ success
 
   private def getHeaderValue(headers: List[Header], key: String): Option[String] =
-    headers.find(_._1 == key).map(_._2.toString)
+    headers.find(_.headerName == key).map(_.renderedValue)
 }

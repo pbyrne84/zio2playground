@@ -1,8 +1,8 @@
 package com.github.pbyrne84.zio2playground.http
 
 import com.github.pbyrne84.zio2playground.tracing.{B3HTTPResponseTracing, B3Tracing}
-import zhttp.http.{Http, Request, Response}
 import zio.ZIO
+import zio.http._
 import zio.telemetry.opentelemetry.Tracing
 
 object TracingHttp {

@@ -4,7 +4,7 @@ import com.github.pbyrne84.zio2playground.logging.{ExampleLogAnnotations, Tracin
 import io.opentelemetry.api.trace.{SpanKind, StatusCode}
 import io.opentelemetry.context.propagation.TextMapPropagator
 import io.opentelemetry.extension.trace.propagation.B3Propagator
-import zhttp.http.Request
+import zio.http.Request
 import zio.telemetry.opentelemetry.Tracing
 import zio.{Trace, ZIO}
 

@@ -5,6 +5,7 @@ import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import org.slf4j
 import org.slf4j.LoggerFactory
+import zio.http.Header
 import zio.logging.backend.SLF4J
 import zio.telemetry.opentelemetry.Tracing
 import zio.{Cause, ZIO, ZIOAppDefault, ZIOHack, ZLayer}
@@ -61,8 +62,8 @@ class LoggingSL4JExample {
     operations.spanFrom(
       propagator = DummyTracing.basicPropagator,
       carrier = List(
-        DummyTracing.traceIdField -> "01115d8eb7e102b505085969c4aca859",
-        DummyTracing.spanIdField -> "40ce80b7c43f2884"
+        Header.Custom(DummyTracing.traceIdField, "01115d8eb7e102b505085969c4aca859"),
+        Header.Custom(DummyTracing.spanIdField, "40ce80b7c43f2884")
       ),
       getter = new HeaderTextMapGetter(),
       spanName = "span-name",

@@ -2,7 +2,6 @@ package zio
 
 import org.slf4j.MDC
 import zio.ZIO.ZIOError
-import zio.internal.FiberRuntime
 import zio.logging.LogContext
 
 import scala.jdk.CollectionConverters.MapHasAsJava
@@ -10,7 +9,7 @@ import scala.jdk.CollectionConverters.MapHasAsJava
 object ZIOHack {
 
   def attemptWithMdcLogging[A](code: => A)(implicit trace: Trace): Task[A] =
-    ZIO.withFiberRuntime[Any, Throwable, A] { (fiberState: FiberRuntime[Throwable, A], _) =>
+    ZIO.withFiberRuntime[Any, Throwable, A] { (fiberState: Fiber.Runtime[Throwable, A], _) =>
       // Logback implementation can return null
       val mdcAtStart = Option(MDC.getCopyOfContextMap)
 

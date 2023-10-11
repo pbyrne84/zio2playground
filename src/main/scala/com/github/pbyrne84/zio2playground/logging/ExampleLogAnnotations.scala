@@ -1,6 +1,6 @@
 package com.github.pbyrne84.zio2playground.logging
 
-import zhttp.http.{Headers, Method, Request, URL}
+import zio.http._
 import zio.logging.LogAnnotation
 
 object ExampleLogAnnotations {
@@ -50,7 +50,7 @@ object ExampleLogAnnotations {
   val incomingRequest: LogAnnotation[Request] = LogAnnotation[Request](
     name = "incoming_request",
     combine = (_: Request, r: Request) => r,
-    render = (request: Request) => s"${request.method.toString}-${URL.encode(request.url)}"
+    render = (request: Request) => s"${request.method.toString}-${request.url.encode}"
   )
 
   // May be worth having a log entry for sent payload if there is one.

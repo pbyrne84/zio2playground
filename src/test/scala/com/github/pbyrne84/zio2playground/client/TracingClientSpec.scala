@@ -7,8 +7,7 @@ import com.github.pbyrne84.zio2playground.tracing.{B3HTTPResponseTracing, TestZi
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.context.propagation.{TextMapGetter, TextMapPropagator}
 import io.opentelemetry.extension.trace.propagation.B3Propagator
-import zhttp.http.Header
-import zhttp.service.{ChannelFactory, EventLoopGroup}
+import zio.http._
 import zio.telemetry.opentelemetry.Tracing
 import zio.test._
 
@@ -20,11 +19,11 @@ object TracingClientSpec extends BaseSpec with ClientOps {
 
   val getter: TextMapGetter[List[Header]] = new TextMapGetter[List[Header]] {
     override def keys(carrier: List[Header]) = {
-      carrier.map(_._1.toString).asJava
+      carrier.map(_.headerName).asJava
     }
 
     override def get(carrier: List[Header], key: String): String = {
-      carrier.find(_._1.toString.toLowerCase == key.toLowerCase).map(_._2.toString).orNull
+      carrier.find(_.headerName.toLowerCase == key.toLowerCase).map(_.renderedValue).orNull
     }
   }
 
@@ -40,13 +39,16 @@ object TracingClientSpec extends BaseSpec with ClientOps {
           _ <- ServerAWireMock.stubCall("sandwiches")
           response <- TracingClient
             .request(s"http://localhost:${config.serverAPort}/banana")
-          responseText <- response.dataAsString
+          responseText <- response.body.asString
           currentSpan <- Tracing.getCurrentSpan
           _ <- ServerAWireMock.verifyHeaders(
             List(
-              B3.header.traceId -> currentSpan.getSpanContext.getTraceId,
-              B3.header.spanId -> "[0-9a-f]{16}", // don't know span id has we have child spans within
-              B3.header.sampled -> "1"
+              Header.Custom(B3.header.traceId, currentSpan.getSpanContext.getTraceId),
+              Header.Custom(
+                B3.header.spanId,
+                "[0-9a-f]{16}"
+              ), // don't know span id has we have child spans within
+              Header.Custom(B3.header.sampled, "1")
             )
           )
         } yield assertTrue(responseText == "sandwiches")
@@ -56,12 +58,11 @@ object TracingClientSpec extends BaseSpec with ClientOps {
         test.spanFrom(propagator, List.empty, getter, "span-name", SpanKind.SERVER)
 
       }.provideSome[BaseSpec.Shared](
-        EventLoopGroup.auto(),
-        ChannelFactory.auto,
         zio.telemetry.opentelemetry.Tracing.live,
         TestZipkinTracer.live,
         TracingClient.tracingClientLayer,
-        B3HTTPResponseTracing.layer
+        B3HTTPResponseTracing.layer,
+        ZClient.default
       )
     )
 }

@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.typesafe.scalalogging.StrictLogging
+import zio.http.Header
 import zio.{Task, ZIO, ZLayer}
 
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -24,8 +25,10 @@ object ServerAWireMock {
   def getStubbings: ZIO[ServerAWireMock, Throwable, List[StubMapping]] =
     ZIO.serviceWithZIO[ServerAWireMock](_.getStubbings)
 
-  def verifyHeaders(headers: List[(String, String)]): ZIO[ServerAWireMock, Throwable, Unit] = {
-    ZIO.serviceWithZIO[ServerAWireMock](_.verifyHeaders(headers))
+  def verifyHeaders(headers: List[Header]): ZIO[ServerAWireMock, Throwable, Unit] = {
+    ZIO.serviceWithZIO[ServerAWireMock](
+      _.verifyHeaders(headers.map((header: Header) => header.headerName -> header.renderedValue))
+    )
   }
 
   def reset: ZIO[ServerAWireMock, Throwable, Unit] = ZIO.serviceWithZIO[ServerAWireMock](_.reset)

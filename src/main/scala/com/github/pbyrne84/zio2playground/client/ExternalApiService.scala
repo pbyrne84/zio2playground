@@ -2,9 +2,7 @@ package com.github.pbyrne84.zio2playground.client
 
 import com.github.pbyrne84.zio2playground.config.{ConfigReader, RemoteServicesConfig}
 import com.github.pbyrne84.zio2playground.tracing.B3Tracing
-import zhttp.http.{Headers, HttpData, Method, Response}
-import zhttp.service.{ChannelFactory, EventLoopGroup}
-import zio.telemetry.opentelemetry.Tracing
+import zio.http.{Body, Headers, Method}
 import zio.{ZIO, ZLayer}
 
 object ExternalApiService {
@@ -33,11 +31,7 @@ object ExternalApiService {
 
 class ExternalApiService(urlFormat: String) {
 
-  def callApi(id: Int): ZIO[
-    EventLoopGroup with ChannelFactory with Tracing with TracingClient,
-    Throwable,
-    Response
-  ] = {
+  def callApi(id: Int) = {
     val payload =
       s"""
         |{ "id" : $id}
@@ -52,10 +46,9 @@ class ExternalApiService(urlFormat: String) {
           url = url,
           method = Method.POST,
           headers = Headers("Content-Type" -> "application/json"),
-          content = HttpData.fromString(payload)
+          content = Body.fromString(payload)
         )
-
-        _ = result.data
+        _ = result.body
       } yield (
         result
       )
